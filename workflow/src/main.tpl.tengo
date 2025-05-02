@@ -1,0 +1,84 @@
+wf := import("@platforma-sdk/workflow-tengo:workflow")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets:= import("@platforma-sdk/workflow-tengo:assets")
+xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+
+pfTopTableConv := import(":pf-top-table-conv")
+// pfBoxplotConv := import(":pf-boxplot-conv")
+// pfStackedBarConv := import(":pf-stacked-bar-conv")
+
+wf.prepare(func(args){
+	
+	metaRefs := {}
+
+	i := 0
+	for metaRef in args.covariateRefs {
+		metaRefs["metaRef" + i ] = wf.resolve(metaRef, { errIfMissing: true })
+		i = i + 1
+	}
+
+	return {
+		resolvedInput: wf.resolve(args.countsRef, { errIfMissing: true }),
+		resolvedContrastFactor: wf.resolve(args.contrastFactor),
+		metaRefs: metaRefs 
+	}
+})
+
+wf.body(func(args) {
+
+	blockId := wf.blockId().getDataAsJson()
+	rawCounts := args.resolvedInput
+	inputSpec := rawCounts.spec
+	species := inputSpec.domain["pl7.app/species"]
+
+	contrastFactor := args.resolvedContrastFactor
+	contrastFactorName := contrastFactor.spec.annotations["pl7.app/label"]
+	numerator := args.numerator
+	denominator := args.denominator
+	pAdjThreshold := args.pAdjThreshold
+	log2FCThreshold := args.log2FCThreshold
+
+	covariates := []
+	for _, v in args.metaRefs {
+		covariates = append(covariates, v)
+	}
+
+	// clusterAnnotation := args.resolvedClusterAnnotation
+	// clusterColumn := clusterAnnotation.spec.annotations["pl7.app/label"]
+	
+	// csvClusters := xsv.exportFrame([clusterAnnotation], "csv", {})
+
+	csvCovariates := xsv.exportFrame(covariates, "csv", {})
+	csvCounts := xsv.exportFrame([rawCounts], "csv", {})
+
+	testWilcoxon := exec.builder().
+		software(assets.importSoftware("@platforma-open/milaboratories.sc-differential-expression.software:run-deWilcoxon")).
+		addFile("metadata.csv", csvCovariates).
+		addFile("counts.csv", csvCounts).
+		arg("--expr").arg("counts.csv").
+		arg("--meta").arg("metadata.csv").
+		arg("--group1").arg(string(numerator)).
+		arg("--group2").arg(string(denominator)).
+		arg("--condition_col").arg(string(contrastFactorName)).
+		arg("--output").arg("topTable.csv").
+		arg("--padj_cutoff").arg(string(pAdjThreshold)).
+		arg("--logfc_cutoff").arg(string(log2FCThreshold)).
+		saveFile("topTable.csv").
+		saveFile("topTable_filtered.csv").
+		printErrStreamToStdout().
+		saveStdoutContent().
+		cache(24 * 60 * 60 * 1000).
+		run()
+
+	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
+	topTablePf := xsv.importFile(testWilcoxon.getFile("topTable.csv"), "csv", topTableImportParams)
+
+	return {
+		outputs: {
+			topTablePf: pframes.exportFrame(topTablePf)
+		},
+		exports: {}
+	}
+})
+
