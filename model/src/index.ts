@@ -3,13 +3,13 @@ import type {
   InferOutputsType,
   PFrameHandle,
   PlDataTableState,
-  PlRef } from '@platforma-sdk/model';
+  PlRef
+} from '@platforma-sdk/model';
 import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTable,
-  isPColumn,
-  isPColumnSpec,
+  isPColumnSpec
 } from '@platforma-sdk/model';
 
 export type UiState = {
@@ -91,21 +91,10 @@ export const model = BlockModel.create()
   })
 
   .output('topTablePf', (ctx): PFrameHandle | undefined => {
-    let pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
-
-    const upstream = ctx.resultPool
-      .getData()
-      .entries.map((v) => v.obj)
-      .filter(isPColumn)
-      .filter((col) => {
-        return col.spec.name === 'pl7.app/rna-seq/geneSymbols';
-      });
-
-    pCols = [...pCols, ...upstream];
-
     return createPFrameForGraphs(ctx, pCols);
   })
 
