@@ -26,17 +26,16 @@ getColumns := func(blockId, species, log2FCThreshold, pAdjFCThreshold) {
       },
 		{
         "column": "gene",
-        "id": "geneid",
-        "allowNA": false,
         "spec": {
           "name": "pl7.app/rna-seq/geneId",
           "type": "String",
           "domain": {
-            "pl7.app/blockId": species
+            "pl7.app/species": species
           },
           "annotations": {
             "pl7.app/label": "Ensembl Id",
-			"pl7.app/table/visibility": "optional"
+			"pl7.app/table/visibility": "optional",
+			"pl7.app/graph/axis/highCardinality": "true"
           }
         }
       }
