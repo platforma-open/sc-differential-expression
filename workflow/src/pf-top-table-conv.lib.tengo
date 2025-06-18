@@ -34,7 +34,7 @@ getColumns := func(blockId, species, log2FCThreshold, pAdjFCThreshold) {
           },
           "annotations": {
             "pl7.app/label": "Ensembl Id",
-			"pl7.app/table/visibility": "optional",
+			"pl7.app/table/visibility": "default",
 			"pl7.app/graph/axis/highCardinality": "true"
           }
         }
