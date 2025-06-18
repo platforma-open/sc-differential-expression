@@ -1,15 +1,16 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
   InferOutputsType,
+  PColumnIdAndSpec,
   PFrameHandle,
   PlDataTableState,
-  PlRef
+  PlRef,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTable,
-  isPColumnSpec
+  isPColumnSpec,
 } from '@platforma-sdk/model';
 
 export type UiState = {
@@ -96,6 +97,22 @@ export const model = BlockModel.create()
       return undefined;
     }
     return createPFrameForGraphs(ctx, pCols);
+  })
+
+  .output('topTablePcols', (ctx) => {
+    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+
+    if (pCols === undefined || pCols.length === 0) {
+      return undefined;
+    }
+
+    return pCols.map(
+      (c) =>
+        ({
+          columnId: c.id,
+          spec: c.spec,
+        } satisfies PColumnIdAndSpec),
+    );
   })
 
   .output('anchorSpec', (ctx) => {
