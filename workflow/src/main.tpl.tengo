@@ -5,6 +5,7 @@ xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 
 pfTopTableConv := import(":pf-top-table-conv")
+pfDEGConv := import(":pf-DEG-conv")
 // pfBoxplotConv := import(":pf-boxplot-conv")
 // pfStackedBarConv := import(":pf-stacked-bar-conv")
 
@@ -72,13 +73,32 @@ wf.body(func(args) {
 		run()
 
 	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
+	// Threshold annotated topTablePf (but not filtered)
 	topTablePf := xsv.importFile(testWilcoxon.getFile("topTable.csv"), "csv", topTableImportParams)
+	// Filtered topTablePf for main table
+	topTableFilteredPf := xsv.importFile(testWilcoxon.getFile("topTable_filtered.csv"), "csv", topTableImportParams)
+
+	// Construct exports for functional analysis
+	DEGImportParams := pfDEGConv.getColumns(blockId, species)
+	DEGPf := xsv.importFile(testWilcoxon.getFile("topTable_filtered.csv"), "csv", DEGImportParams)
+
+	exports := {
+		log2foldchange: {
+			spec: DEGPf["log2foldchange.spec"],
+			data: DEGPf["log2foldchange.data"]
+		},
+		regulationDirection: {
+			spec: DEGPf["regulationDirection.spec"],
+			data: DEGPf["regulationDirection.data"]
+		}
+	}
 
 	return {
 		outputs: {
-			topTablePf: pframes.exportFrame(topTablePf)
+			topTablePf: pframes.exportFrame(topTablePf),
+			topTableFilteredPf: pframes.exportFrame(topTableFilteredPf)
 		},
-		exports: {}
+		exports: exports
 	}
 })
 

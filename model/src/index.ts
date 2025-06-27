@@ -82,8 +82,8 @@ export const model = BlockModel.create()
     return [...new Set(Object.values(values))];
   })
 
-  .output('topTablePt', (ctx) => {
-    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+  .output('topTableFilteredPt', (ctx) => {
+    const pCols = ctx.outputs?.resolve('topTableFilteredPf')?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }

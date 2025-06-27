@@ -1,0 +1,81 @@
+ll := import("@platforma-sdk/workflow-tengo:ll")
+
+getColumns := func(blockId, species) {
+  return {
+    axes: [
+		{
+        column: "Contrast",
+        id: "contrast",
+        allowNA: false,
+        spec: {
+          name: "pl7.app/rna-seq/contrastGroup",
+          type: "String",
+          domain: {
+            "pl7.app/blockId": blockId
+          },
+          annotations: {
+            "pl7.app/label": "Contrast"
+          }
+        }
+      },
+		{
+        column: "gene",
+        spec: {
+          name: "pl7.app/rna-seq/geneId",
+          type: "String",
+          domain: {
+            "pl7.app/species": species
+          },
+          annotations: {
+            "pl7.app/label": "Ensembl Id",
+            "pl7.app/table/visibility": "default",
+            "pl7.app/graph/axis/highCardinality": "true"
+          }
+        }
+      }
+      ],
+    columns: [
+			{
+				column: "logfc",
+				id: "log2foldchange",
+				allowNA: true,
+				spec: {
+                    name: "pl7.app/rna-seq/DEG",
+                    domain: {
+                        "pl7.app/species": species
+                    },
+                    valueType: "Double",
+					annotations: {
+						"pl7.app/label": "Log2FC",
+                        "pl7.app/table/hValue": "true",
+						"pl7.app/table/orderPriority": "60",
+						"pl7.app/format": ".2f",
+						"pl7.app/isSubset": "true"
+					}
+				}
+			},
+			{
+				column: "regulationDirection",
+				id: "regulationDirection",
+				spec: {
+					name: "pl7.app/rna-seq/regulationDirection",
+                    domain: {
+                        "pl7.app/species": species
+                    },
+					valueType: "String",
+					annotations: {
+						"pl7.app/label": "Regulation direction",
+						"pl7.app/table/orderPriority": "5",
+						"pl7.app/isSubset": "true"
+					}
+				}
+			}
+      ],
+    storageFormat: "Binary",
+    partitionKeyLength: 1
+  }
+}
+
+export ll.toStrict({
+	getColumns: getColumns
+}) 
