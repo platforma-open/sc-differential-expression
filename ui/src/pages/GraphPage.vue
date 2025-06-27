@@ -1,81 +1,46 @@
 <script setup lang="ts">
-import type { GraphMakerProps } from '@milaboratories/graph-maker';
+import type { GraphMakerProps, PredefinedGraphOption } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
 import '@milaboratories/graph-maker/styles';
+import type { PColumnIdAndSpec } from '@platforma-sdk/model';
+import { computed } from 'vue';
 import { useApp } from '../app';
 
 const app = useApp();
 
-const defaultOptions: GraphMakerProps['defaultOptions'] = [
-  {
-    inputName: 'x',
-    selectedSource: {
-      kind: 'PColumn',
-      name: 'pl7.app/rna-seq/log2foldchange',
-      valueType: 'Double',
-      axesSpec: [
-        {
-          name: 'pl7.app/rna-seq/contrastGroup',
-          type: 'String',
-        },
-        {
-          name: 'pl7.app/rna-seq/geneId',
-          type: 'String',
-        },
-      ],
+const defaultOptions = computed((): GraphMakerProps['defaultOptions'] => {
+  if (!app.model.outputs.topTablePcols)
+    return undefined;
+
+  const topTablePcols = app.model.outputs.topTablePcols;
+  function getIndex(name: string, pcols: PColumnIdAndSpec[]): number {
+    return pcols.findIndex((p) => (p.spec.name === name));
+  }
+
+  const defaults: PredefinedGraphOption<'scatterplot-umap'>[] = [
+    {
+      inputName: 'x',
+      selectedSource: topTablePcols[getIndex('pl7.app/rna-seq/log2foldchange', topTablePcols)].spec,
     },
-  },
-  {
-    inputName: 'y',
-    selectedSource: {
-      kind: 'PColumn',
-      name: 'pl7.app/rna-seq/minlog10padj',
-      valueType: 'Double',
-      axesSpec: [
-        {
-          name: 'pl7.app/rna-seq/contrastGroup',
-          type: 'String',
-        },
-        {
-          name: 'pl7.app/rna-seq/geneId',
-          type: 'String',
-        },
-      ],
+    {
+      inputName: 'y',
+      selectedSource: topTablePcols[getIndex('pl7.app/rna-seq/minlog10padj', topTablePcols)].spec,
     },
-  },
-  {
-    inputName: 'grouping',
-    selectedSource: {
-      kind: 'PColumn',
-      name: 'pl7.app/rna-seq/regulationDirection',
-      valueType: 'String',
-      axesSpec: [
-        {
-          name: 'pl7.app/rna-seq/contrastGroup',
-          type: 'String',
-        },
-        {
-          name: 'pl7.app/rna-seq/geneId',
-          type: 'String',
-        },
-      ],
+    {
+      inputName: 'grouping',
+      selectedSource: topTablePcols[getIndex('pl7.app/rna-seq/regulationDirection', topTablePcols)].spec,
     },
-  },
-  {
-    inputName: 'label',
-    selectedSource: {
-      name: 'pl7.app/rna-seq/geneId',
-      type: 'String',
+    {
+      inputName: 'label',
+      selectedSource: topTablePcols[getIndex('pl7.app/rna-seq/regulationDirection', topTablePcols)].spec.axesSpec[1],
     },
-  },
-  {
-    inputName: 'tooltipContent',
-    selectedSource: {
-      name: 'pl7.app/rna-seq/geneId',
-      type: 'String',
+    {
+      inputName: 'tooltipContent',
+      selectedSource: topTablePcols[getIndex('pl7.app/rna-seq/regulationDirection', topTablePcols)].spec.axesSpec[1],
     },
-  },
-];
+  ];
+  return defaults;
+});
 
 </script>
 

@@ -11,7 +11,7 @@ const app = useApp();
 
 const tableSettings = computed<PlDataTableSettings>(() => ({
   sourceType: 'ptable',
-  pTable: app.model.outputs.topTablePt,
+  pTable: app.model.outputs.topTableFilteredPt,
 }));
 
 const data = reactive<{
@@ -88,9 +88,9 @@ const denominatorOptions = computed(() => {
       <PlDropdown v-model="app.model.args.denominator" :options="denominatorOptions" label="Denominator" />
 
       <PlAccordionSection label="THRESHOLD PARAMETERS">
-      <PlRow>
-        <PlNumberField
-          v-model="app.model.args.log2FCThreshold"
+        <PlRow>
+          <PlNumberField
+            v-model="app.model.args.log2FCThreshold"
             label="Log2(FC)" :minValue="0" :step="0.1"
           >
             <template #tooltip>

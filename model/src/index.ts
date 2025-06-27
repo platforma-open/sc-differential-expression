@@ -1,14 +1,15 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
   InferOutputsType,
+  PColumnIdAndSpec,
   PFrameHandle,
   PlDataTableState,
-  PlRef } from '@platforma-sdk/model';
+  PlRef,
+} from '@platforma-sdk/model';
 import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTable,
-  isPColumn,
   isPColumnSpec,
 } from '@platforma-sdk/model';
 
@@ -81,8 +82,8 @@ export const model = BlockModel.create()
     return [...new Set(Object.values(values))];
   })
 
-  .output('topTablePt', (ctx) => {
-    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+  .output('topTableFilteredPt', (ctx) => {
+    const pCols = ctx.outputs?.resolve('topTableFilteredPf')?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
@@ -91,22 +92,27 @@ export const model = BlockModel.create()
   })
 
   .output('topTablePf', (ctx): PFrameHandle | undefined => {
-    let pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
-
-    const upstream = ctx.resultPool
-      .getData()
-      .entries.map((v) => v.obj)
-      .filter(isPColumn)
-      .filter((col) => {
-        return col.spec.name === 'pl7.app/rna-seq/geneSymbols';
-      });
-
-    pCols = [...pCols, ...upstream];
-
     return createPFrameForGraphs(ctx, pCols);
+  })
+
+  .output('topTablePcols', (ctx) => {
+    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+
+    if (pCols === undefined || pCols.length === 0) {
+      return undefined;
+    }
+
+    return pCols.map(
+      (c) =>
+        ({
+          columnId: c.id,
+          spec: c.spec,
+        } satisfies PColumnIdAndSpec),
+    );
   })
 
   .output('anchorSpec', (ctx) => {
