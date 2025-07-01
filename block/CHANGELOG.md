@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression
 
+## 1.2.0
+
+### Minor Changes
+
+- 5e8aecf: allow prepare venv on Windows
+
 ## 1.1.1
 
 ### Patch Changes
