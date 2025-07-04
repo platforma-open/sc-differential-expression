@@ -17,6 +17,19 @@ const defaultOptions = computed((): GraphMakerProps['defaultOptions'] => {
     return pcols.findIndex((p) => (p.spec.name === name));
   }
 
+  // Check if all required columns exist
+  const requiredColumns = [
+    'pl7.app/rna-seq/log2foldchange',
+    'pl7.app/rna-seq/minlog10padj',
+    'pl7.app/rna-seq/regulationDirection',
+  ];
+
+  for (const columnName of requiredColumns) {
+    if (getIndex(columnName, topTablePcols) === -1) {
+      return undefined;
+    }
+  }
+
   const defaults: PredefinedGraphOption<'scatterplot-umap'>[] = [
     {
       inputName: 'x',
