@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.2.0
+
+### Minor Changes
+
+- f2c5fd6: Added gene symbols for better interpretation of the results.
+
 ## 1.1.1
 
 ### Patch Changes
