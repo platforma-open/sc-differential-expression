@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.3.0
+
+### Minor Changes
+
+- 0f60e23: Update SDK and migrate to PlAgDataTableV2
+
 ## 1.2.0
 
 ### Minor Changes

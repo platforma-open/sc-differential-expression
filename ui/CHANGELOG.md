@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.sc-differential-expression.ui
 
+## 1.3.0
+
+### Minor Changes
+
+- 0f60e23: Update SDK and migrate to PlAgDataTableV2
+
+### Patch Changes
+
+- Updated dependencies [0f60e23]
+  - @platforma-open/milaboratories.sc-differential-expression.model@1.3.0
+
 ## 1.2.0
 
 ### Minor Changes
