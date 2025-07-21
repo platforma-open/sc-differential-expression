@@ -3,20 +3,20 @@ import type {
   InferOutputsType,
   PColumnIdAndSpec,
   PFrameHandle,
-  PlDataTableState,
+  PlDataTableStateV2,
   PlRef,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
   createPFrameForGraphs,
-  createPlDataTable,
+  createPlDataTableV2,
   isPColumnSpec,
 } from '@platforma-sdk/model';
 
 export type UiState = {
   anchorColumn?: PlRef;
   graphState: GraphMakerState;
-  tableState: PlDataTableState;
+  tableState: PlDataTableStateV2;
 };
 
 export type BlockArgs = {
@@ -88,7 +88,7 @@ export const model = BlockModel.create()
       return undefined;
     }
 
-    return createPlDataTable(ctx, pCols, ctx.uiState?.tableState);
+    return createPlDataTableV2(ctx, pCols, ctx.uiState?.tableState);
   })
 
   .output('topTablePf', (ctx): PFrameHandle | undefined => {

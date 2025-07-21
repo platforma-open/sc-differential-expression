@@ -64,7 +64,9 @@ getColumns := func(blockId, species, log2FCThreshold, pAdjFCThreshold) {
 					valueType: "Double",
 					annotations: {
 						"pl7.app/label": "Adjusted p-value",
-						"pl7.app/table/orderPriority": "20"
+						"pl7.app/table/orderPriority": "20",
+						"pl7.app/format": ".2e"
+
 					}
 				}
 			},
@@ -77,7 +79,9 @@ getColumns := func(blockId, species, log2FCThreshold, pAdjFCThreshold) {
 					valueType: "Double",
 					annotations: {
 						"pl7.app/label": "-log10 adjusted p-value",
-						"pl7.app/table/orderPriority": "10"
+						"pl7.app/table/orderPriority": "10",
+						"pl7.app/format": ".2f"
+
 					}
 				}
 			},
