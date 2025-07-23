@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.4.0
+
+### Minor Changes
+
+- cfd865c: Add trace to exports
+
 ## 1.3.0
 
 ### Minor Changes
