@@ -9,6 +9,11 @@ def main(expr_path, meta_path, group1, group2, output, condition_col, padj_cutof
     df_expr = pd.read_csv(expr_path)
     df_meta = pd.read_csv(meta_path)
 
+    # Normalize header labels to support migration from 'Cell Barcode' to 'Cell ID'
+    df_expr.columns = [c.strip() for c in df_expr.columns]
+    if 'Cell Barcode' not in df_expr.columns and 'Cell ID' in df_expr.columns:
+        df_expr = df_expr.rename(columns={'Cell ID': 'Cell Barcode'})
+
     # Create unique cell IDs
     df_expr['CellID'] = df_expr['Sample'].astype(str) + '_' + df_expr['Cell Barcode']
 
