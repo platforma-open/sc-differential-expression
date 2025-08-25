@@ -51,11 +51,17 @@ wf.body(func(args) {
 	
 	// csvClusters := xsv.exportFrame([clusterAnnotation], "csv", {})
 
-	csvCovariates := xsv.exportFrame(covariates, "csv", {})
-	csvCounts := xsv.exportFrame([rawCounts], "csv", {})
+	// Set default conversion memory and CPU
+	defaultConvMem := "16GiB" // @TODO: set based on the size of the input
+	defaultConvCpu := 1       // @TODO: set based on the size of the input
+
+	csvCovariates := xsv.exportFrame(covariates, "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
+	csvCounts := xsv.exportFrame([rawCounts], "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	testWilcoxon := exec.builder().
 		software(assets.importSoftware("@platforma-open/milaboratories.sc-differential-expression.software:run-deWilcoxon")).
+		mem("16GiB").
+		cpu(1).
 		addFile("metadata.csv", csvCovariates).
 		addFile("counts.csv", csvCounts).
 		arg("--expr").arg("counts.csv").
@@ -75,13 +81,13 @@ wf.body(func(args) {
 
 	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
 	// Threshold annotated topTablePf (but not filtered)
-	topTablePf := xsv.importFile(testWilcoxon.getFile("topTable.csv"), "csv", topTableImportParams)
+	topTablePf := xsv.importFile(testWilcoxon.getFile("topTable.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 	// Filtered topTablePf for main table
-	topTableFilteredPf := xsv.importFile(testWilcoxon.getFile("topTable_filtered.csv"), "csv", topTableImportParams)
+	topTableFilteredPf := xsv.importFile(testWilcoxon.getFile("topTable_filtered.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	// Construct exports for functional analysis
 	DEGImportParams := pfDEGConv.getColumns(blockId, species)
-	DEGPf := xsv.importFile(testWilcoxon.getFile("topTable_filtered.csv"), "csv", DEGImportParams)
+	DEGPf := xsv.importFile(testWilcoxon.getFile("topTable_filtered.csv"), "csv", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	// Create informative label with relevant differential expression parameters
 	pAdjStr := string(pAdjThreshold)
