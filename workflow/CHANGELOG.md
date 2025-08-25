@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.5.0
+
+### Minor Changes
+
+- 177cc06: Add batch support
+
 ## 1.4.1
 
 ### Patch Changes
