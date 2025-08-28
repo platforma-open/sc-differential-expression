@@ -1,5 +1,12 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.5.1
+
+### Patch Changes
+
+- Updated dependencies [18c0d47]
+  - @platforma-open/milaboratories.sc-differential-expression.software@1.2.1
+
 ## 1.5.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.software
 
+## 1.2.1
+
+### Patch Changes
+
+- 18c0d47: Change dataset label and update SDK
+
 ## 1.2.0
 
 ### Minor Changes
