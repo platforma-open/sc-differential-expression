@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression
 
+## 1.2.7
+
+### Patch Changes
+
+- d16afba: Fix merge publication
+
 ## 1.2.6
 
 ### Patch Changes
