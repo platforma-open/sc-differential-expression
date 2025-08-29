@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.5.2
+
+### Patch Changes
+
+- bf2d04f: Updated trace
+
 ## 1.5.1
 
 ### Patch Changes
