@@ -96,7 +96,7 @@ wf.body(func(args) {
 	// Make trace
 	traceLabel := "Differential Expression (" + numerator + " vs " + denominator + ", logfc:" + log2FCStr + ", pval:" + pAdjStr + ")"
 	
-	trace := pSpec.makeTrace(inputSpec, { type: "milaboratories.sc-differential-expression", importance: 45, label: traceLabel })
+	trace := pSpec.makeTrace(inputSpec, { type: "milaboratories.sc-differential-expression", importance: 70, label: traceLabel })
 
 	exports := {
 		log2foldchange: {
