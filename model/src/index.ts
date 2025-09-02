@@ -143,6 +143,6 @@ export const model = BlockModel.create()
       : 'sc Differential Expression',
   )
 
-  .done();
+  .done(2);
 
 export type BlockOutputs = InferOutputsType<typeof model>;
