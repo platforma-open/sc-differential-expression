@@ -62,7 +62,9 @@ export const model = BlockModel.create()
 
   .output('countsOptions', (ctx) =>
     ctx.resultPool.getOptions((spec) => isPColumnSpec(spec)
-      && spec.name === 'pl7.app/rna-seq/countMatrix' && spec.domain?.['pl7.app/rna-seq/normalized'] === 'false'
+      && spec.name === 'pl7.app/rna-seq/countMatrix'
+      && spec.domain?.['pl7.app/rna-seq/normalized'] === 'false'
+      && spec.annotations?.['pl7.app/hideDataFromGraphs'] === 'true'
     , { includeNativeLabel: false, addLabelAsSuffix: true }),
   )
 
@@ -139,10 +141,10 @@ export const model = BlockModel.create()
 
   .title((ctx) =>
     ctx.args.title
-      ? `sc Differential Expression - ${ctx.args.title}`
-      : 'sc Differential Expression',
+      ? `Differential Expression - ${ctx.args.title}`
+      : 'Differential Expression',
   )
 
-  .done();
+  .done(2);
 
 export type BlockOutputs = InferOutputsType<typeof model>;
