@@ -141,8 +141,8 @@ export const model = BlockModel.create()
 
   .title((ctx) =>
     ctx.args.title
-      ? `sc Differential Expression - ${ctx.args.title}`
-      : 'sc Differential Expression',
+      ? `Differential Expression - ${ctx.args.title}`
+      : 'Differential Expression',
   )
 
   .done(2);
