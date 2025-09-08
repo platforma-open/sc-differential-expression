@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.software
 
+## 1.2.2
+
+### Patch Changes
+
+- ab9a5ce: Full SDK update
+
 ## 1.2.1
 
 ### Patch Changes
