@@ -1,15 +1,9 @@
 wf := import("@platforma-sdk/workflow-tengo:workflow")
-exec := import("@platforma-sdk/workflow-tengo:exec")
 assets:= import("@platforma-sdk/workflow-tengo:assets")
+render := import("@platforma-sdk/workflow-tengo:render")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
-pframes := import("@platforma-sdk/workflow-tengo:pframes")
-pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
-pt := import("@platforma-sdk/workflow-tengo:pt")
 
-pfTopTableConv := import(":pf-top-table-conv")
-pfDEGConv := import(":pf-DEG-conv")
-// pfBoxplotConv := import(":pf-boxplot-conv")
-// pfStackedBarConv := import(":pf-stacked-bar-conv")
+runWilcoxonTpl := assets.importTemplate(":runWilcoxon")
 
 wf.prepare(func(args){
 	
@@ -42,90 +36,44 @@ wf.body(func(args) {
 	pAdjThreshold := args.pAdjThreshold
 	log2FCThreshold := args.log2FCThreshold
 
+	// Set default conversion memory and CPU
+	defaultConvMem := "16GiB"
+	defaultConvCpu := 1
+
 	covariates := []
 	for _, v in args.metaRefs {
 		covariates = append(covariates, v)
 	}
 
-	// clusterAnnotation := args.resolvedClusterAnnotation
-	// clusterColumn := clusterAnnotation.spec.annotations["pl7.app/label"]
-	
-	// csvClusters := xsv.exportFrame([clusterAnnotation], "csv", {})
-
-	// Set default conversion memory and CPU
-	defaultConvMem := "16GiB" // @TODO: set based on the size of the input
-	defaultConvCpu := 1       // @TODO: set based on the size of the input
-
 	csvCovariates := xsv.exportFrame(covariates, "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
-	csvCounts := xsv.exportFrame([rawCounts], "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
 
-	wf := pt.workflow().cpu(1).mem("2GiB")
-	dfsTopTable := []
-	dfsTopTableFiltered := []
-	for numerator in numerators {
-		testWilcoxon := exec.builder().
-			software(assets.importSoftware("@platforma-open/milaboratories.sc-differential-expression.software:run-deWilcoxon")).
-			mem("16GiB").
-			cpu(1).
-			addFile("metadata.csv", csvCovariates).
-			addFile("counts.csv", csvCounts).
-			arg("--expr").arg("counts.csv").
-			arg("--meta").arg("metadata.csv").
-			arg("--group1").arg(string(numerator)).
-			arg("--group2").arg(string(denominator)).
-			arg("--condition_col").arg(string(contrastFactorName)).
-			arg("--output").arg("topTable.csv").
-			arg("--padj_cutoff").arg(string(pAdjThreshold)).
-			arg("--logfc_cutoff").arg(string(log2FCThreshold)).
-			saveFile("topTable.csv").
-			saveFile("topTable_filtered.csv").
-			printErrStreamToStdout().
-			saveStdoutContent().
-			cache(24 * 60 * 60 * 1000).
-			run()
-		dfsTopTable += [wf.frame(testWilcoxon.getFile("topTable.csv"), {xsvType: "csv"})]
-		dfsTopTableFiltered += [wf.frame(testWilcoxon.getFile("topTable_filtered.csv"), {xsvType: "csv"})]
-	}
+	runWilcoxon := render.create(runWilcoxonTpl, {
+		rawCounts: rawCounts,
+		csvCovariates: csvCovariates,
+		inputSpec: inputSpec,
+		species: species,
+		numerators: numerators,
+		contrastFactorName: contrastFactorName,
+		params: {
+			denominator: denominator,
+			pAdjThreshold: pAdjThreshold,
+			log2FCThreshold: log2FCThreshold,
+			blockId: blockId
+		}
+	})
 
-	concatenatedTopTable := pt.concat(dfsTopTable)
-	concatenatedTopTable.save("concatenated_output_topTable.csv")
-	concatenatedTopTableFiltered := pt.concat(dfsTopTableFiltered)
-	concatenatedTopTableFiltered.save("concatenated_output_topTable_filtered.csv")
-	ptablerResult := wf.run()
-
-	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
-	// Threshold annotated topTablePf (but not filtered)
-	topTablePf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-	// Filtered topTablePf for main table
-	topTableFilteredPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-
-	// Construct exports for functional analysis
-	DEGImportParams := pfDEGConv.getColumns(blockId, species)
-	DEGPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-
-	// Create informative label with relevant differential expression parameters
-	pAdjStr := string(pAdjThreshold)
-	log2FCStr := string(log2FCThreshold)
-	
-	// Make trace
-	traceLabel := "DEG - Denominator: " + denominator + " (log2FC: " + log2FCStr + ", pAdj: " + pAdjStr + ")"
-	trace := pSpec.makeTrace(inputSpec, { type: "milaboratories.sc-differential-expression", importance: 70, label: traceLabel })
+	topTablePf := runWilcoxon.output("topTablePf", 24 * 60 * 60 * 1000)
+	topTableFilteredPf := runWilcoxon.output("topTableFilteredPf", 24 * 60 * 60 * 1000)
 
 	exports := {
-		log2foldchange: {
-			spec: trace.inject(DEGPf["log2foldchange.spec"]),
-			data: DEGPf["log2foldchange.data"]
-		},
-		regulationDirection: {
-			spec: trace.inject(DEGPf["regulationDirection.spec"]),
-			data: DEGPf["regulationDirection.data"]
-		}
+		log2foldchange: runWilcoxon.output("log2foldchange", 24 * 60 * 60 * 1000),
+		regulationDirection: runWilcoxon.output("regulationDirection", 24 * 60 * 60 * 1000)
 	}
-
+	
 	return {
 		outputs: {
-			topTablePf: pframes.exportFrame(topTablePf),
-			topTableFilteredPf: pframes.exportFrame(topTableFilteredPf)
+			topTablePf: topTablePf,
+			topTableFilteredPf: topTableFilteredPf
 		},
 		exports: exports
 	}
