@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import '@milaboratories/graph-maker/styles';
-import { PlAccordionSection, PlAgDataTableV2, PlAlert, PlBlockPage, PlBtnGhost, PlDropdown, PlDropdownMulti, PlDropdownRef, PlMaskIcon24, PlNumberField, PlRow, PlSlideModal, usePlDataTableSettingsV2 } from '@platforma-sdk/ui-vue';
-import { useApp } from '../app';
-import { computed, reactive } from 'vue';
 import type { PlRef } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
+import { PlAccordionSection, PlAgDataTableV2, PlAlert, PlBlockPage, PlBtnGhost, PlDropdown, PlDropdownMulti, PlDropdownRef, PlMaskIcon24, PlNumberField, PlRow, PlSlideModal, usePlDataTableSettingsV2 } from '@platforma-sdk/ui-vue';
+import { computed, reactive } from 'vue';
+import { useApp } from '../app';
 
 const app = useApp();
 
@@ -49,7 +49,7 @@ const numeratorOptions = computed(() => {
 
 const denominatorOptions = computed(() => {
   return numeratorOptions.value?.filter((op) =>
-    !app.model.args.numerator?.includes(op.value));
+    !app.model.args.numerators.includes(op.value));
 });
 
 </script>
@@ -95,14 +95,14 @@ const denominatorOptions = computed(() => {
           </div>
         </template>
       </PlDropdown>
-      <PlDropdown v-model="app.model.args.numerator" :options="numeratorOptions" label="Numerator (test group)" required>
+      <PlDropdownMulti v-model="app.model.args.numerators" :options="numeratorOptions" label="Numerator (test group)" required>
         <template #tooltip>
           <div>
             <strong>Test condition or group</strong><br/>
             Select the experimental condition or group of interest. Genes upregulated in this group will have positive log2 fold-changes in the results.
           </div>
         </template>
-      </PlDropdown>
+      </PlDropdownMulti>
       <PlDropdown v-model="app.model.args.denominator" :options="denominatorOptions" label="Denominator (reference group)" required>
         <template #tooltip>
           <div>
