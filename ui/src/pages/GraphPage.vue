@@ -52,6 +52,11 @@ const defaultOptions = computed((): PredefinedGraphOption<'scatterplot-umap'>[] 
       inputName: 'tooltipContent',
       selectedSource: topTablePcols[getIndex('pl7.app/rna-seq/regulationDirection', topTablePcols)].spec.axesSpec[1],
     },
+    {
+      inputName: 'tabBy',
+      selectedSource: topTablePcols[getIndex('pl7.app/rna-seq/log2foldchange',
+        topTablePcols)].spec.axesSpec[0],
+    },
   ];
   return defaults;
 });

@@ -1,16 +1,16 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
-  InferOutputsType,
-  PColumnIdAndSpec,
-  PFrameHandle,
-  PlDataTableStateV2,
-  PlRef,
+    InferOutputsType,
+    PColumnIdAndSpec,
+    PFrameHandle,
+    PlDataTableStateV2,
+    PlRef,
 } from '@platforma-sdk/model';
 import {
-  BlockModel,
-  createPFrameForGraphs,
-  createPlDataTableV2,
-  isPColumnSpec,
+    BlockModel,
+    createPFrameForGraphs,
+    createPlDataTableV2,
+    isPColumnSpec,
 } from '@platforma-sdk/model';
 
 export type UiState = {
@@ -24,7 +24,7 @@ export type BlockArgs = {
   covariateRefs: PlRef[];
   contrastFactor?: PlRef;
   denominator?: string;
-  numerator?: string;
+  numerators: string[];
   log2FCThreshold: number;
   pAdjThreshold: number;
   title?: string;
@@ -34,6 +34,7 @@ export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
     covariateRefs: [],
+    numerators: [],
     log2FCThreshold: 1,
     pAdjThreshold: 0.05,
   })
@@ -54,7 +55,7 @@ export const model = BlockModel.create()
   })
 
   .argsValid((ctx) => (
-    (ctx.args.numerator !== undefined))
+    (ctx.args.numerators !== undefined)) && (ctx.args.numerators.length !== 0)
   && (ctx.args.denominator !== undefined)
   && (ctx.args.log2FCThreshold !== undefined)
   && (ctx.args.pAdjThreshold !== undefined),

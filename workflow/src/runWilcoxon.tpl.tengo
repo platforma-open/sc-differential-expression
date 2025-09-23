@@ -1,0 +1,115 @@
+// run Wilcoxon test
+self := import("@platforma-sdk/workflow-tengo:tpl")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets:= import("@platforma-sdk/workflow-tengo:assets")
+xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
+pt := import("@platforma-sdk/workflow-tengo:pt")
+
+pfTopTableConv := import(":pf-top-table-conv")
+pfDEGConv := import(":pf-DEG-conv")
+
+self.validateInputs({
+	"__options__,closed": "",
+	rawCounts: "any",
+	csvCovariates: "any",
+	inputSpec: "any",
+	species: "any",
+	numerators: "any",
+	contrastFactorName: "any",
+	params: {
+		"__options__,closed": "",
+		"denominator,omitempty": "string",
+		"pAdjThreshold,omitempty": "number",
+		"log2FCThreshold,omitempty": "number",
+		"blockId,omitempty": "string"
+	}
+	
+})
+
+self.defineOutputs("topTablePf", "topTableFilteredPf", "log2foldchange", "regulationDirection")
+
+self.body(func(args) {
+	rawCounts := args.rawCounts
+	csvCovariates := args.csvCovariates
+	inputSpec := args.inputSpec
+	species := args.species
+	numerators := args.numerators
+	contrastFactorName := args.contrastFactorName
+	
+	denominator := args.params.denominator
+	pAdjThreshold := args.params.pAdjThreshold
+	log2FCThreshold := args.params.log2FCThreshold
+	blockId := args.params.blockId
+
+	// Set default conversion memory and CPU
+	defaultConvMem := "16GiB"
+	defaultConvCpu := 1
+
+	
+	csvCounts := xsv.exportFrame([rawCounts], "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
+
+	wf := pt.workflow().cpu(1).mem("2GiB")
+	dfsTopTable := []
+	dfsTopTableFiltered := []
+	for numerator in numerators {
+		testWilcoxon := exec.builder().
+			software(assets.importSoftware("@platforma-open/milaboratories.sc-differential-expression.software:run-deWilcoxon")).
+			mem("16GiB").
+			cpu(1).
+			addFile("metadata.csv", csvCovariates).
+			addFile("counts.csv", csvCounts).
+			arg("--expr").arg("counts.csv").
+			arg("--meta").arg("metadata.csv").
+			arg("--group1").arg(string(numerator)).
+			arg("--group2").arg(string(denominator)).
+			arg("--condition_col").arg(string(contrastFactorName)).
+			arg("--output").arg("topTable.csv").
+			arg("--padj_cutoff").arg(string(pAdjThreshold)).
+			arg("--logfc_cutoff").arg(string(log2FCThreshold)).
+			saveFile("topTable.csv").
+			saveFile("topTable_filtered.csv").
+			printErrStreamToStdout().
+			saveStdoutContent().
+			cache(24 * 60 * 60 * 1000).
+			run()
+		dfsTopTable += [wf.frame(testWilcoxon.getFile("topTable.csv"), {xsvType: "csv"})]
+		dfsTopTableFiltered += [wf.frame(testWilcoxon.getFile("topTable_filtered.csv"), {xsvType: "csv"})]
+	}
+
+	concatenatedTopTable := pt.concat(dfsTopTable)
+	concatenatedTopTable.save("concatenated_output_topTable.csv")
+	concatenatedTopTableFiltered := pt.concat(dfsTopTableFiltered)
+	concatenatedTopTableFiltered.save("concatenated_output_topTable_filtered.csv")
+	ptablerResult := wf.run()
+
+	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
+	topTablePf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	topTableFilteredPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+
+	DEGImportParams := pfDEGConv.getColumns(blockId, species)
+	DEGPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+
+	pAdjStr := string(pAdjThreshold)
+	log2FCStr := string(log2FCThreshold)
+	
+	traceLabel := "DEG - Denominator: " + denominator + " (log2FC: " + log2FCStr + ", pAdj: " + pAdjStr + ")"
+	trace := pSpec.makeTrace(inputSpec, { type: "milaboratories.sc-differential-expression", importance: 70, label: traceLabel })
+
+	log2foldchange := {
+		spec: trace.inject(DEGPf["log2foldchange.spec"]),
+		data: DEGPf["log2foldchange.data"]
+	}
+	regulationDirection := {
+		spec: trace.inject(DEGPf["regulationDirection.spec"]),
+		data: DEGPf["regulationDirection.data"]
+	}
+
+	return {
+		topTablePf: pframes.exportFrame(topTablePf),
+		topTableFilteredPf: pframes.exportFrame(topTableFilteredPf),
+		log2foldchange: log2foldchange,
+		regulationDirection: regulationDirection
+	}
+})
