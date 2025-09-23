@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.model
 
+## 1.3.3
+
+### Patch Changes
+
+- d560773: Refactoring and allow multiple numerators
+
 ## 1.3.2
 
 ### Patch Changes
