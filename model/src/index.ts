@@ -1,16 +1,16 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
-    InferOutputsType,
-    PColumnIdAndSpec,
-    PFrameHandle,
-    PlDataTableStateV2,
-    PlRef,
+  InferOutputsType,
+  PColumnIdAndSpec,
+  PFrameHandle,
+  PlDataTableStateV2,
+  PlRef,
 } from '@platforma-sdk/model';
 import {
-    BlockModel,
-    createPFrameForGraphs,
-    createPlDataTableV2,
-    isPColumnSpec,
+  BlockModel,
+  createPFrameForGraphs,
+  createPlDataTableV2,
+  isPColumnSpec,
 } from '@platforma-sdk/model';
 
 export type UiState = {
@@ -65,7 +65,7 @@ export const model = BlockModel.create()
     ctx.resultPool.getOptions((spec) => isPColumnSpec(spec)
       && spec.name === 'pl7.app/rna-seq/countMatrix'
       && spec.domain?.['pl7.app/rna-seq/normalized'] === 'false'
-      && spec.annotations?.['pl7.app/hideDataFromGraphs'] === 'true'
+      // && spec.annotations?.['pl7.app/hideDataFromGraphs'] === 'true'
     , { includeNativeLabel: false, addLabelAsSuffix: true }),
   )
 
