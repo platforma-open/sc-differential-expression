@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.model
 
+## 1.3.4
+
+### Patch Changes
+
+- a2be6d6: Support latest Cell Ranger version
+
 ## 1.3.3
 
 ### Patch Changes
