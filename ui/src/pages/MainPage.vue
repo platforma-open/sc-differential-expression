@@ -93,6 +93,9 @@ const errorLogs = useWatchFetch(() => app.model.outputs.deErrors, async (pframeH
   if (!response) {
     return undefined;
   }
+  if (response.values.data.length === 0) {
+    return undefined;
+  }
   return response.values.data.join('\n');
 });
 
@@ -109,7 +112,7 @@ const errorLogs = useWatchFetch(() => app.model.outputs.deErrors, async (pframeH
         </template>
       </PlBtnGhost>
     </template>
-    <PlAlert v-if="errorLogs.value !== ''" type="warn" icon label="Warning">
+    <PlAlert v-if="errorLogs.value !== undefined" type="warn" icon label="Warning">
       {{ errorLogs.value }}
     </PlAlert>
     <PlAgDataTableV2

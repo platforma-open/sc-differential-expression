@@ -88,7 +88,7 @@ def main(expr_path, meta_path, group1, group2, output, condition_col,
     # Extract results
     result = adata.uns['rank_genes_groups']
     group = group1
-    contrast_label = f"{group1}_vs_{group2}"
+    contrast_label = f"{group1} vs {group2}"
     out_df = pd.DataFrame({
         'gene': result['names'][group],
         'logfc': result['logfoldchanges'][group],
