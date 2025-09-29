@@ -46,13 +46,27 @@ self.body(func(args) {
 	// Set default conversion memory and CPU
 	defaultConvMem := "16GiB"
 	defaultConvCpu := 1
-
 	
 	csvCounts := xsv.exportFrame([rawCounts], "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	wf := pt.workflow().cpu(1).mem("2GiB")
 	dfsTopTable := []
 	dfsTopTableFiltered := []
+
+	// We need a column type schema for cases where empty filtered tables are 
+	// concatenated with non-empty ones
+	// In these cases the column types of empty columns are String and fail to 
+	//merge with same columns that have different type
+	schema := [
+		{column: "Contrast", type: "String"},
+		{column: "gene", type: "String"},
+		{column: "logfc", type: "Float"},
+		{column: "pval", type: "Float"},
+		{column: "pval_adj", type: "Float"},
+		{column: "score", type: "Float"},
+		{column: "minlog10padj", type: "Float"},
+		{column: "regulationDirection", type: "String"}
+	]
 	for numerator in numerators {
 		testWilcoxon := exec.builder().
 			software(assets.importSoftware("@platforma-open/milaboratories.sc-differential-expression.software:run-deWilcoxon")).
@@ -75,7 +89,8 @@ self.body(func(args) {
 			cache(24 * 60 * 60 * 1000).
 			run()
 		dfsTopTable += [wf.frame(testWilcoxon.getFile("topTable.csv"), {xsvType: "csv"})]
-		dfsTopTableFiltered += [wf.frame(testWilcoxon.getFile("topTable_filtered.csv"), {xsvType: "csv"})]
+		// These tables might be empty, so we make sure to include an schema of expected column formats
+		dfsTopTableFiltered += [wf.frame(testWilcoxon.getFile("topTable_filtered.csv"), {xsvType: "csv", schema: schema})]
 	}
 
 	concatenatedTopTable := pt.concat(dfsTopTable)

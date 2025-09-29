@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import '@milaboratories/graph-maker/styles';
 import type { PlRef } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
-import { PlAccordionSection, PlAgDataTableV2, PlAlert, PlBlockPage, PlBtnGhost, PlDropdown, PlDropdownMulti, PlDropdownRef, PlMaskIcon24, PlNumberField, PlRow, PlSlideModal, usePlDataTableSettingsV2 } from '@platforma-sdk/ui-vue';
+import { PFrameImpl, plRefsEqual } from '@platforma-sdk/model';
+import { PlAccordionSection, PlAgDataTableV2, PlAlert, PlBlockPage, PlBtnGhost, PlDropdown, PlDropdownMulti, PlDropdownRef, PlMaskIcon24, PlNumberField, PlRow, PlSlideModal, usePlDataTableSettingsV2, useWatchFetch } from '@platforma-sdk/ui-vue';
 import { computed, reactive } from 'vue';
 import { useApp } from '../app';
 
@@ -40,15 +40,39 @@ const contrastFactorOptions = computed(() => {
   }));
 });
 
-const numeratorOptions = computed(() => {
-  return app.model.outputs.denominatorOptions?.map((v) => ({
-    value: v,
-    label: v,
-  }));
+// Get all possible numerator/denominator values
+const uniqueOptions = useWatchFetch(() => app.model.outputs.numeratorOptions, async (pframeHandle) => {
+  if (!pframeHandle) {
+    return undefined;
+  }
+  // Get ID of first pcolumn in the pframe (the only one we will access)
+  const pFrame = new PFrameImpl(pframeHandle);
+  const list = await pFrame.listColumns();
+  const id = list?.[0].columnId;
+  if (!id) {
+    return undefined;
+  }
+  // Get unique values of that first pcolumn
+  const response = await pFrame.getUniqueValues({ columnId: id, filters: [], limit: 1000000 });
+  if (!response) {
+    return undefined;
+  }
+  // Check if there where old selected numerator/denominator values and remove them
+  const availableValues = [...response.values.data].map(String);
+  if (app.model.args.numerators?.some((selectedValue) => !availableValues.includes(selectedValue))) {
+    app.model.args.numerators = [];
+  }
+  if (app.model.args.denominator && !availableValues.includes(app.model.args.denominator)) {
+    app.model.args.denominator = undefined;
+  }
+
+  // Reset previous values
+  return [...response.values.data].map((v) => ({ value: String(v), label: String(v) }));
 });
 
+// Get all possible denominator values (excluding numerators)
 const denominatorOptions = computed(() => {
-  return numeratorOptions.value?.filter((op) =>
+  return uniqueOptions.value?.filter((op) =>
     !app.model.args.numerators.includes(op.value));
 });
 
@@ -95,7 +119,7 @@ const denominatorOptions = computed(() => {
           </div>
         </template>
       </PlDropdown>
-      <PlDropdownMulti v-model="app.model.args.numerators" :options="numeratorOptions" label="Numerator (test group)" required>
+      <PlDropdownMulti v-model="app.model.args.numerators" :options="uniqueOptions.value" label="Numerator (test group)" required>
         <template #tooltip>
           <div>
             <strong>Test condition or group</strong><br/>

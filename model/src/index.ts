@@ -70,19 +70,20 @@ export const model = BlockModel.create()
   )
 
   .output('metadataOptions', (ctx) =>
-    ctx.resultPool.getOptions((spec) => isPColumnSpec(spec) && spec.name === 'pl7.app/metadata'),
+    ctx.resultPool.getOptions((spec) => isPColumnSpec(spec)
+      && ((spec.name === 'pl7.app/metadata')
+        // @TODO: We will have a specific annotation in the future
+        || (spec.name === 'pl7.app/rna-seq/leidencluster')
+        || (spec.name === 'pl7.app/rna-seq/cellType'))),
   )
 
-  .output('denominatorOptions', (ctx) => {
+  .output('numeratorOptions', (ctx) => {
     if (!ctx.args.contrastFactor) return undefined;
 
-    const data = ctx.resultPool.getDataByRef(ctx.args.contrastFactor)?.data;
+    const pColumn = ctx.resultPool.getPColumnByRef(ctx.args.contrastFactor);
+    if (!pColumn) return undefined;
 
-    // @TODO need a convenient method in API
-    const values = data?.getDataAsJson<Record<string, string>>()?.['data'];
-    if (!values) return undefined;
-
-    return [...new Set(Object.values(values))];
+    return ctx.createPFrame([pColumn]);
   })
 
   .output('topTableFilteredPt', (ctx) => {

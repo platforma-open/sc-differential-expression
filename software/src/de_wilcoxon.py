@@ -26,9 +26,17 @@ def main(expr_path, meta_path, group1, group2, output, condition_col, padj_cutof
     )
 
     # Map metadata to cells
-    cell_to_sample = df_expr.drop_duplicates('CellID')[['CellID', 'Sample']].set_index('CellID')
-    cell_metadata = cell_to_sample.join(df_meta.set_index('Sample'), on='Sample')
-    cell_metadata = cell_metadata.loc[df_matrix.index]
+    ## Cases where we do DE using sample metadata
+    if 'Cell ID' not in df_meta:
+        cell_to_sample = df_expr.drop_duplicates('CellID')[['CellID', 'Sample']].set_index('CellID')
+        cell_metadata = cell_to_sample.join(df_meta.set_index('Sample'), on='Sample')
+        cell_metadata = cell_metadata.loc[df_matrix.index]
+    ## Cases where we do DE using cell metadata
+    else:
+        cell_metadata = df_meta.rename(columns={'Cell ID': 'Cell Barcode'})
+        cell_metadata['CellID'] = cell_metadata['Sample'].astype(str) + '_' + cell_metadata['Cell Barcode']
+        cell_metadata.set_index('CellID', inplace=True)
+        cell_metadata = cell_metadata.loc[df_matrix.index].copy()
 
     # Create AnnData object
     adata = AnnData(X=df_matrix.values, obs=cell_metadata, var=pd.DataFrame(index=df_matrix.columns))
@@ -66,9 +74,10 @@ def main(expr_path, meta_path, group1, group2, output, condition_col, padj_cutof
     padj_nonzero = out_df['pval_adj'].replace(0, np.nanmin(out_df['pval_adj'][out_df['pval_adj'] > 0]))
     out_df['minlog10padj'] = -np.log10(padj_nonzero)
     out_df['regulationDirection'] = np.select(
-        [out_df['logfc'] > 0, out_df['logfc'] < 0],
+        [(out_df['logfc'] >= logfc_cutoff) & (out_df['pval_adj'] <= padj_cutoff), 
+            (out_df['logfc'] <= -logfc_cutoff) & (out_df['pval_adj'] <= padj_cutoff)],
         ['Up', 'Down'],
-        default='None'
+        default='NS'
     )
     out_df.insert(0, 'Contrast', contrast_label)
 
@@ -78,8 +87,8 @@ def main(expr_path, meta_path, group1, group2, output, condition_col, padj_cutof
 
     # Filter by cutoffs
     filtered_df = out_df[
-        (out_df['pval_adj'] < padj_cutoff) &
-        (out_df['logfc'].abs() > logfc_cutoff)
+        (out_df['pval_adj'] <= padj_cutoff) &
+        (out_df['logfc'].abs() >= logfc_cutoff)
     ]
     filtered_output = output.replace('.csv', '_filtered.csv')
     filtered_df.to_csv(filtered_output, index=False)
