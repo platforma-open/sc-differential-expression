@@ -8,6 +8,7 @@ pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
 pt := import("@platforma-sdk/workflow-tengo:pt")
 
 pfTopTableConv := import(":pf-top-table-conv")
+pfDeErrorsConv := import(":pf-de-errors-conv")
 pfDEGConv := import(":pf-DEG-conv")
 
 self.validateInputs({
@@ -28,7 +29,8 @@ self.validateInputs({
 	
 })
 
-self.defineOutputs("topTablePf", "topTableFilteredPf", "log2foldchange", "regulationDirection")
+self.defineOutputs("topTablePf", "topTableFilteredPf", "log2foldchange", 
+	"regulationDirection", "deErrors")
 
 self.body(func(args) {
 	rawCounts := args.rawCounts
@@ -52,6 +54,7 @@ self.body(func(args) {
 	wf := pt.workflow().cpu(1).mem("2GiB")
 	dfsTopTable := []
 	dfsTopTableFiltered := []
+	dfsDeErrors := []
 
 	// We need a column type schema for cases where empty filtered tables are 
 	// concatenated with non-empty ones
@@ -66,6 +69,10 @@ self.body(func(args) {
 		{column: "score", type: "Float"},
 		{column: "minlog10padj", type: "Float"},
 		{column: "regulationDirection", type: "String"}
+	]
+	schemaDeErrors := [
+		{column: "Error", type: "String"},
+		{column: "value", type: "String"}
 	]
 	for numerator in numerators {
 		testWilcoxon := exec.builder().
@@ -82,26 +89,43 @@ self.body(func(args) {
 			arg("--output").arg("topTable.csv").
 			arg("--padj_cutoff").arg(string(pAdjThreshold)).
 			arg("--logfc_cutoff").arg(string(log2FCThreshold)).
+			arg("--error_output").arg("de_errors.csv").
 			saveFile("topTable.csv").
 			saveFile("topTable_filtered.csv").
+			saveFile("de_errors.csv").
 			printErrStreamToStdout().
 			saveStdoutContent().
 			cache(24 * 60 * 60 * 1000).
 			run()
-		dfsTopTable += [wf.frame(testWilcoxon.getFile("topTable.csv"), {xsvType: "csv"})]
 		// These tables might be empty, so we make sure to include an schema of expected column formats
+		dfsTopTable += [wf.frame(testWilcoxon.getFile("topTable.csv"), {xsvType: "csv", schema: schema})]
 		dfsTopTableFiltered += [wf.frame(testWilcoxon.getFile("topTable_filtered.csv"), {xsvType: "csv", schema: schema})]
+		dfsDeErrors += [wf.frame(testWilcoxon.getFile("de_errors.csv"), {xsvType: "csv", schema: schemaDeErrors})]
 	}
 
+	///////// ptabler steps //////////
 	concatenatedTopTable := pt.concat(dfsTopTable)
 	concatenatedTopTable.save("concatenated_output_topTable.csv")
 	concatenatedTopTableFiltered := pt.concat(dfsTopTableFiltered)
 	concatenatedTopTableFiltered.save("concatenated_output_topTable_filtered.csv")
+
+	// Concatenate and deduplicate error files
+	concatenatedDeErrors := pt.concat(dfsDeErrors)
+	// @TODO: find a better way to remove duplicated lines
+	uniqueDeErrors := concatenatedDeErrors.groupBy("Error").agg(
+		pt.col("value").first().alias("value")
+	)
+	uniqueDeErrors.save("concatenated_output_de_errors.csv")
+
 	ptablerResult := wf.run()
+	//////////////////
 
 	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
 	topTablePf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 	topTableFilteredPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	
+	deErrorsImportParams := pfDeErrorsConv.getColumns()
+	deErrorsPf := xsv.importFile(ptablerResult.getFile("concatenated_output_de_errors.csv"), "csv", deErrorsImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	DEGImportParams := pfDEGConv.getColumns(blockId, species)
 	DEGPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
@@ -124,6 +148,7 @@ self.body(func(args) {
 	return {
 		topTablePf: pframes.exportFrame(topTablePf),
 		topTableFilteredPf: pframes.exportFrame(topTableFilteredPf),
+		deErrors: pframes.exportFrame(deErrorsPf),
 		log2foldchange: log2foldchange,
 		regulationDirection: regulationDirection
 	}

@@ -95,6 +95,15 @@ export const model = BlockModel.create()
     return createPlDataTableV2(ctx, pCols, ctx.uiState?.tableState);
   })
 
+  .output('deErrors', (ctx) => {
+    const pCols = ctx.outputs?.resolve('deErrors')?.getPColumns();
+    if (pCols === undefined) {
+      return undefined;
+    }
+
+    return ctx.createPFrame(pCols);
+  })
+
   .output('topTablePf', (ctx): PFrameHandle | undefined => {
     const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
     if (pCols === undefined) {

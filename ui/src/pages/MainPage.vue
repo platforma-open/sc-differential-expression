@@ -76,6 +76,26 @@ const denominatorOptions = computed(() => {
     !app.model.args.numerators.includes(op.value));
 });
 
+// Get error logs
+const errorLogs = useWatchFetch(() => app.model.outputs.deErrors, async (pframeHandle) => {
+  if (!pframeHandle) {
+    return undefined;
+  }
+  // Get ID of first pcolumn in the pframe (the only one we will access)
+  const pFrame = new PFrameImpl(pframeHandle);
+  const list = await pFrame.listColumns();
+  const id = list?.[0].columnId;
+  if (!id) {
+    return undefined;
+  }
+  // Get unique values of that first pcolumn
+  const response = await pFrame.getUniqueValues({ columnId: id, filters: [], limit: 1000000 });
+  if (!response) {
+    return undefined;
+  }
+  return response.values.data.join('\n');
+});
+
 </script>
 
 <template>
@@ -89,6 +109,9 @@ const denominatorOptions = computed(() => {
         </template>
       </PlBtnGhost>
     </template>
+    <PlAlert v-if="errorLogs.value !== ''" type="warn" icon label="Warning">
+      {{ errorLogs.value }}
+    </PlAlert>
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
       :settings="tableSettings"
