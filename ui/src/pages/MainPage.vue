@@ -112,7 +112,7 @@ const errorLogs = useWatchFetch(() => app.model.outputs.deErrors, async (pframeH
         </template>
       </PlBtnGhost>
     </template>
-    <PlAlert v-if="errorLogs.value !== undefined" type="warn" icon label="Warning">
+    <PlAlert v-if="errorLogs.value !== undefined" type="warn" icon>
       {{ errorLogs.value }}
     </PlAlert>
     <PlAgDataTableV2
