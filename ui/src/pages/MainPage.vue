@@ -120,6 +120,7 @@ const errorLogs = useWatchFetch(() => app.model.outputs.deErrors, async (pframeH
       :settings="tableSettings"
       show-columns-panel
       show-export-button
+      no-rows-text="There are no differentially expressed genes between the chosen conditions"
     />
     <PlSlideModal v-model="data.settingsOpen">
       <template #title>Settings</template>
