@@ -64,6 +64,7 @@ wf.body(func(args) {
 
 	topTablePf := runWilcoxon.output("topTablePf", 24 * 60 * 60 * 1000)
 	topTableFilteredPf := runWilcoxon.output("topTableFilteredPf", 24 * 60 * 60 * 1000)
+	deErrors := runWilcoxon.output("deErrors", 24 * 60 * 60 * 1000)
 
 	exports := {
 		log2foldchange: runWilcoxon.output("log2foldchange", 24 * 60 * 60 * 1000),
@@ -73,7 +74,8 @@ wf.body(func(args) {
 	return {
 		outputs: {
 			topTablePf: topTablePf,
-			topTableFilteredPf: topTableFilteredPf
+			topTableFilteredPf: topTableFilteredPf,
+			deErrors: deErrors
 		},
 		exports: exports
 	}
