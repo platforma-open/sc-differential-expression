@@ -1,5 +1,14 @@
 # @platforma-open/milaboratories.sc-differential-expression
 
+## 1.2.12
+
+### Patch Changes
+
+- Updated dependencies [498627e]
+  - @platforma-open/milaboratories.sc-differential-expression.workflow@1.6.0
+  - @platforma-open/milaboratories.sc-differential-expression.model@1.4.0
+  - @platforma-open/milaboratories.sc-differential-expression.ui@1.4.0
+
 ## 1.2.11
 
 ### Patch Changes

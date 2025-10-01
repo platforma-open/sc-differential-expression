@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.model
 
+## 1.4.0
+
+### Minor Changes
+
+- 498627e: Allow cell annotations in contrast and show warnings if there are issues with the analysis
+
 ## 1.3.4
 
 ### Patch Changes
