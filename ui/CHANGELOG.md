@@ -1,5 +1,19 @@
 # @platforma-open/milaboratories.sc-differential-expression.ui
 
+## 1.4.1
+
+### Patch Changes
+
+- 9a84bf7: technical release
+- 89faa47: technical release
+- 03d124f: technical release
+- e8e3c63: technical release
+- Updated dependencies [9a84bf7]
+- Updated dependencies [89faa47]
+- Updated dependencies [03d124f]
+- Updated dependencies [e8e3c63]
+  - @platforma-open/milaboratories.sc-differential-expression.model@1.4.1
+
 ## 1.4.0
 
 ### Minor Changes
