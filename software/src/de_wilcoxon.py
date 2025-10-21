@@ -14,8 +14,8 @@ def main(expr_path, meta_path, group1, group2, output, condition_col,
     errorLogs = []
     for group_ in [group1, group2]:
         sumGroup = sum(df_meta[condition_col] == group_)
-        if sumGroup <= 1:
-            errorL = f"Statistics could not be calculated for group(s) {group_} because it contains only one sample."
+        if sumGroup == 0:
+            errorL = f"Statistics could not be calculated for group(s) {group_} because they are not present in any sample."
             print(errorL)
             errorLogs += [errorL]
     if len(errorLogs) > 0:
