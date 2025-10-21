@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.software
 
+## 1.3.2
+
+### Patch Changes
+
+- 41bdf7b: Remove replicate check
+
 ## 1.3.1
 
 ### Patch Changes
