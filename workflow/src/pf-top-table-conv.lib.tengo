@@ -35,7 +35,7 @@ getColumns := func(blockId, species, log2FCThreshold, pAdjFCThreshold) {
           annotations: {
             "pl7.app/label": "Ensembl Id",
 			"pl7.app/table/visibility": "default",
-			"pl7.app/graph/axis/highCardinality": "true"
+			"pl7.app/graph/axis/highCardinality": "false"
           }
         }
       }
@@ -100,7 +100,7 @@ getColumns := func(blockId, species, log2FCThreshold, pAdjFCThreshold) {
 				}
 			}
       ],
-    storageFormat: "Binary",
+    storageFormat: "Parquet",
     partitionKeyLength: 1
   }
 }
