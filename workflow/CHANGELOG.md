@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.6.3
+
+### Patch Changes
+
+- dfcff01: Update to Parquet
+
 ## 1.6.2
 
 ### Patch Changes
