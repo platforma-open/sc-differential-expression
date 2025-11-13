@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.sc-differential-expression
 
+## 1.3.0
+
+### Minor Changes
+
+- 9183a8c: Enable deduplication and block metadata update.
+
+### Patch Changes
+
+- Updated dependencies [9183a8c]
+  - @platforma-open/milaboratories.sc-differential-expression.workflow@1.7.0
+
 ## 1.2.15
 
 ### Patch Changes
