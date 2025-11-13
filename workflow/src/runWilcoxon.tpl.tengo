@@ -2,54 +2,34 @@
 self := import("@platforma-sdk/workflow-tengo:tpl")
 exec := import("@platforma-sdk/workflow-tengo:exec")
 assets:= import("@platforma-sdk/workflow-tengo:assets")
-xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
-pframes := import("@platforma-sdk/workflow-tengo:pframes")
-pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
 pt := import("@platforma-sdk/workflow-tengo:pt")
-
-pfTopTableConv := import(":pf-top-table-conv")
-pfDeErrorsConv := import(":pf-de-errors-conv")
-pfDEGConv := import(":pf-DEG-conv")
 
 self.validateInputs({
 	"__options__,closed": "",
-	rawCounts: "any",
+	csvCounts: "any",
 	csvCovariates: "any",
-	inputSpec: "any",
-	species: "any",
 	numerators: "any",
 	contrastFactorName: "any",
 	params: {
 		"__options__,closed": "",
 		"denominator,omitempty": "string",
 		"pAdjThreshold,omitempty": "number",
-		"log2FCThreshold,omitempty": "number",
-		"blockId,omitempty": "string"
+		"log2FCThreshold,omitempty": "number"
 	}
 	
 })
 
-self.defineOutputs("topTablePf", "topTableFilteredPf", "log2foldchange", 
-	"regulationDirection", "deErrors")
+self.defineOutputs("topTableCsv", "topTableFilteredCsv", "deErrorsCsv")
 
 self.body(func(args) {
-	rawCounts := args.rawCounts
+	csvCounts := args.csvCounts
 	csvCovariates := args.csvCovariates
-	inputSpec := args.inputSpec
-	species := args.species
 	numerators := args.numerators
 	contrastFactorName := args.contrastFactorName
 	
 	denominator := args.params.denominator
 	pAdjThreshold := args.params.pAdjThreshold
 	log2FCThreshold := args.params.log2FCThreshold
-	blockId := args.params.blockId
-
-	// Set default conversion memory and CPU
-	defaultConvMem := "16GiB"
-	defaultConvCpu := 1
-	
-	csvCounts := xsv.exportFrame([rawCounts], "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	wf := pt.workflow().cpu(1).mem("2GiB")
 	dfsTopTable := []
@@ -120,36 +100,10 @@ self.body(func(args) {
 	ptablerResult := wf.run()
 	//////////////////
 
-	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
-	topTablePf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-	topTableFilteredPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-	
-	deErrorsImportParams := pfDeErrorsConv.getColumns()
-	deErrorsPf := xsv.importFile(ptablerResult.getFile("concatenated_output_de_errors.csv"), "csv", deErrorsImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-
-	DEGImportParams := pfDEGConv.getColumns(blockId, species)
-	DEGPf := xsv.importFile(ptablerResult.getFile("concatenated_output_topTable_filtered.csv"), "csv", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-
-	pAdjStr := string(pAdjThreshold)
-	log2FCStr := string(log2FCThreshold)
-	
-	traceLabel := "DEG - Denominator: " + denominator + " (log2FC: " + log2FCStr + ", pAdj: " + pAdjStr + ")"
-	trace := pSpec.makeTrace(inputSpec, { type: "milaboratories.sc-differential-expression", importance: 70, label: traceLabel })
-
-	log2foldchange := {
-		spec: trace.inject(DEGPf["log2foldchange.spec"]),
-		data: DEGPf["log2foldchange.data"]
-	}
-	regulationDirection := {
-		spec: trace.inject(DEGPf["regulationDirection.spec"]),
-		data: DEGPf["regulationDirection.data"]
-	}
-
+	// Return CSV file paths
 	return {
-		topTablePf: pframes.exportFrame(topTablePf),
-		topTableFilteredPf: pframes.exportFrame(topTableFilteredPf),
-		deErrors: pframes.exportFrame(deErrorsPf),
-		log2foldchange: log2foldchange,
-		regulationDirection: regulationDirection
+		topTableCsv: ptablerResult.getFile("concatenated_output_topTable.csv"),
+		topTableFilteredCsv: ptablerResult.getFile("concatenated_output_topTable_filtered.csv"),
+		deErrorsCsv: ptablerResult.getFile("concatenated_output_de_errors.csv")
 	}
 })
