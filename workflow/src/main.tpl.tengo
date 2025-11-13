@@ -2,6 +2,12 @@ wf := import("@platforma-sdk/workflow-tengo:workflow")
 assets:= import("@platforma-sdk/workflow-tengo:assets")
 render := import("@platforma-sdk/workflow-tengo:render")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
+
+pfTopTableConv := import(":pf-top-table-conv")
+pfDeErrorsConv := import(":pf-de-errors-conv")
+pfDEGConv := import(":pf-DEG-conv")
 
 runWilcoxonTpl := assets.importTemplate(":runWilcoxon")
 
@@ -46,36 +52,54 @@ wf.body(func(args) {
 	}
 
 	csvCovariates := xsv.exportFrame(covariates, "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
+	csvCounts := xsv.exportFrame([rawCounts], "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
 
-	runWilcoxon := render.create(runWilcoxonTpl, {
-		rawCounts: rawCounts,
+	runWilcoxonRender := render.create(runWilcoxonTpl, {
+		csvCounts: csvCounts,
 		csvCovariates: csvCovariates,
-		inputSpec: inputSpec,
-		species: species,
 		numerators: numerators,
 		contrastFactorName: contrastFactorName,
 		params: {
 			denominator: denominator,
 			pAdjThreshold: pAdjThreshold,
-			log2FCThreshold: log2FCThreshold,
-			blockId: blockId
+			log2FCThreshold: log2FCThreshold
 		}
 	})
 
-	topTablePf := runWilcoxon.output("topTablePf", 24 * 60 * 60 * 1000)
-	topTableFilteredPf := runWilcoxon.output("topTableFilteredPf", 24 * 60 * 60 * 1000)
-	deErrors := runWilcoxon.output("deErrors", 24 * 60 * 60 * 1000)
+	// Import CSV files as pFrames
+	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
+	topTablePf := xsv.importFile(runWilcoxonRender.output("topTableCsv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	topTableFilteredPf := xsv.importFile(runWilcoxonRender.output("topTableFilteredCsv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	
+	deErrorsImportParams := pfDeErrorsConv.getColumns()
+	deErrorsPf := xsv.importFile(runWilcoxonRender.output("deErrorsCsv"), "csv", deErrorsImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 
+	DEGImportParams := pfDEGConv.getColumns(blockId, species)
+	DEGPf := xsv.importFile(runWilcoxonRender.output("topTableFilteredCsv"), "csv", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+
+	// Create trace
+	pAdjStr := string(pAdjThreshold)
+	log2FCStr := string(log2FCThreshold)
+	traceLabel := "DEG - Denominator: " + denominator + " (log2FC: " + log2FCStr + ", pAdj: " + pAdjStr + ")"
+	trace := pSpec.makeTrace(inputSpec, { type: "milaboratories.sc-differential-expression", importance: 70, label: traceLabel })
+
+	// Build exports with trace injection
 	exports := {
-		log2foldchange: runWilcoxon.output("log2foldchange", 24 * 60 * 60 * 1000),
-		regulationDirection: runWilcoxon.output("regulationDirection", 24 * 60 * 60 * 1000)
+		log2foldchange: {
+			spec: trace.inject(DEGPf["log2foldchange.spec"]),
+			data: DEGPf["log2foldchange.data"]
+		},
+		regulationDirection: {
+			spec: trace.inject(DEGPf["regulationDirection.spec"]),
+			data: DEGPf["regulationDirection.data"]
+		}
 	}
 	
 	return {
 		outputs: {
-			topTablePf: topTablePf,
-			topTableFilteredPf: topTableFilteredPf,
-			deErrors: deErrors
+			topTablePf: pframes.exportFrame(topTablePf),
+			topTableFilteredPf: pframes.exportFrame(topTableFilteredPf),
+			deErrors: pframes.exportFrame(deErrorsPf)
 		},
 		exports: exports
 	}

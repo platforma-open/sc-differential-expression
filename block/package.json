@@ -27,9 +27,10 @@
     "meta": {
       "title": "Differential Expression (Single Cell)",
       "logo": "file:../logos/block-logo.png",
-      "url": "https://github.com/platforma-open/milaboratories.sc-differential-expression",
+      "url": "https://github.com/platforma-open/sc-differential-expression",
+      "docs": "https://docs.platforma.bio/guides/sc-rna-seq-analysis/differential-expression/",
       "support": "mailto:support@milaboratories.com",
-      "description": "Identifies differentially expressed genes between two groups of single cells.",
+      "description": "Identifies differentially expressed genes between cell groups using Wilcoxon rank-sum test.",
       "longDescription": "file:../docs/description.md",
       "changelog": "file:../CHANGELOG.md",
       "tags": [
