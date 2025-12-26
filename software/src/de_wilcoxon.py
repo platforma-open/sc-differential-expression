@@ -120,22 +120,18 @@ def main(expr_path, meta_path, group1, group2, output, condition_col,
     log_message("Aligning metadata to cells", "STEP")
     ## Cases where we do DE using sample metadata
     if 'Cell ID' not in df_meta.columns:
-        adata.obs = adata.obs.merge(df_meta, on='Sample', how='left')
+        # Join on Sample while preserving the original index and row order
+        adata.obs = adata.obs.join(df_meta.set_index('Sample'), on='Sample')
     ## Cases where we do DE using cell metadata
     else:
         meta_temp = df_meta.rename(columns={'Cell ID': 'Cell Barcode'})
         # Create matching UniqueCellId for merging
         meta_temp['UniqueCellId'] = meta_temp['Sample'].astype(str) + SEPARATOR + meta_temp['Cell Barcode'].astype(str)
-        # Merge on UniqueCellId but drop the redundant sample/barcode from metadata to avoid conflicts
-        adata.obs = adata.obs.merge(
-            meta_temp.drop(columns=['Sample', 'Cell Barcode']), 
-            left_index=True, 
-            right_on='UniqueCellId', 
-            how='left'
+        # Join on UniqueCellId while preserving the original index and row order
+        # Drop redundant sample/barcode from metadata to avoid conflicts
+        adata.obs = adata.obs.join(
+            meta_temp.set_index('UniqueCellId').drop(columns=['Sample', 'Cell Barcode'], errors='ignore')
         )
-    
-    # Restore the index lost during pandas merge
-    adata.obs.index = unique_cell_ids
     
     # 5. PREPROCESSING & ANALYSIS
     log_message("Normalizing and log-transforming", "STEP")
