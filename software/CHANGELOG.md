@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.software
 
+## 1.3.3
+
+### Patch Changes
+
+- e020722: Imporove performance
+
 ## 1.3.2
 
 ### Patch Changes
