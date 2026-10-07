@@ -1,67 +1,52 @@
-import type { GraphMakerState } from "@milaboratories/graph-maker";
-import type {
-  InferOutputsType,
-  PColumnIdAndSpec,
-  PFrameHandle,
-  PlDataTableStateV2,
-  PlRef,
-} from "@platforma-sdk/model";
+import { kind } from "@platforma-open/milaboratories.sc-differential-expression.kind";
+import type { InferOutputsType, PColumnIdAndSpec, PFrameHandle } from "@platforma-sdk/model";
 import {
-  BlockModel,
+  BlockModelV3,
   createPFrameForGraphs,
   createPlDataTableV2,
   isPColumnSpec,
 } from "@platforma-sdk/model";
+import { blockDataModel } from "./dataModel";
+import type { BlockArgs } from "./types";
 
-export type UiState = {
-  anchorColumn?: PlRef;
-  graphState: GraphMakerState;
-  tableState: PlDataTableStateV2;
-};
+export { blockDataModel } from "./dataModel";
+export type { BlockArgs, BlockData } from "./types";
 
-export type BlockArgs = {
-  countsRef?: PlRef;
-  covariateRefs: PlRef[];
-  contrastFactor?: PlRef;
-  denominator?: string;
-  numerators: string[];
-  log2FCThreshold: number;
-  pAdjThreshold: number;
-  title?: string;
-};
+export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind })
 
-export const model = BlockModel.create()
+  // The run gate. Throwing shows the reason in the UI. Replaces V1's
+  // `.argsValid`. The projection strips the view state and returns the same
+  // keys V1 stored as args.
+  .args<BlockArgs>((data): BlockArgs => {
+    const { graphState: _graphState, tableState: _tableState, ...args } = data;
 
-  .withArgs<BlockArgs>({
-    covariateRefs: [],
-    numerators: [],
-    log2FCThreshold: 1,
-    pAdjThreshold: 0.05,
+    if (args.countsRef === undefined) {
+      throw new Error("Dataset is required");
+    }
+    if (args.contrastFactor === undefined) {
+      throw new Error("Contrast factor is required");
+    }
+    if (args.numerators.length === 0) {
+      throw new Error("At least one numerator group is required");
+    }
+    if (args.denominator === undefined) {
+      throw new Error("Denominator group is required");
+    }
+
+    return args;
   })
 
-  .withUiState<UiState>({
-    tableState: {
-      gridState: {},
-      pTableParams: {
-        sorting: [],
-        filters: [],
-      },
-    },
-    graphState: {
-      title: "Differential gene expression",
-      template: "dots",
-      currentTab: null,
-    },
-  })
-
-  .argsValid(
-    (ctx) =>
-      ctx.args.numerators !== undefined &&
-      ctx.args.numerators.length !== 0 &&
-      ctx.args.denominator !== undefined &&
-      ctx.args.log2FCThreshold !== undefined &&
-      ctx.args.pAdjThreshold !== undefined,
-  )
+  // Inverse of the kind's init-params contract. `title` is left out: the UI
+  // derives it from the dataset label.
+  .templateParams((data) => ({
+    countsRef: data.countsRef,
+    covariateRefs: data.covariateRefs,
+    contrastFactor: data.contrastFactor,
+    numerators: data.numerators,
+    denominator: data.denominator,
+    log2FCThreshold: data.log2FCThreshold,
+    pAdjThreshold: data.pAdjThreshold,
+  }))
 
   .output("countsOptions", (ctx) =>
     ctx.resultPool.getOptions(
@@ -69,7 +54,6 @@ export const model = BlockModel.create()
         isPColumnSpec(spec) &&
         spec.name === "pl7.app/rna-seq/countMatrix" &&
         spec.domain?.["pl7.app/rna-seq/normalized"] === "false",
-      // && spec.annotations?.['pl7.app/hideDataFromGraphs'] === 'true'
       { includeNativeLabel: false, addLabelAsSuffix: true },
     ),
   )
@@ -86,21 +70,24 @@ export const model = BlockModel.create()
   )
 
   .output("numeratorOptions", (ctx) => {
-    if (!ctx.args.contrastFactor) return undefined;
+    if (!ctx.data.contrastFactor) return undefined;
 
-    const pColumn = ctx.resultPool.getPColumnByRef(ctx.args.contrastFactor);
+    const pColumn = ctx.resultPool.getPColumnByRef(ctx.data.contrastFactor);
     if (!pColumn) return undefined;
 
     return ctx.createPFrame([pColumn]);
   })
 
-  .output("topTableFilteredPt", (ctx) => {
+  // `withStatus` on the table and the volcano frame: PlAgDataTableV2 (via
+  // usePlDataTableSettingsV2) and GraphMaker both take the status-wrapped
+  // output and render the pending and error states from it.
+  .outputWithStatus("topTableFilteredPt", (ctx) => {
     const pCols = ctx.outputs?.resolve("topTableFilteredPf")?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
 
-    return createPlDataTableV2(ctx, pCols, ctx.uiState?.tableState);
+    return createPlDataTableV2(ctx, pCols, ctx.data.tableState);
   })
 
   .output("deErrors", (ctx) => {
@@ -112,7 +99,7 @@ export const model = BlockModel.create()
     return ctx.createPFrame(pCols);
   })
 
-  .output("topTablePf", (ctx): PFrameHandle | undefined => {
+  .outputWithStatus("topTablePf", (ctx): PFrameHandle | undefined => {
     const pCols = ctx.outputs?.resolve("topTablePf")?.getPColumns();
     if (pCols === undefined) {
       return undefined;
@@ -136,21 +123,6 @@ export const model = BlockModel.create()
     );
   })
 
-  .output("anchorSpec", (ctx) => {
-    // return the Reference of the p-column selected as input dataset in Settings
-    if (!ctx.uiState?.anchorColumn) return undefined;
-
-    // Get the specs of that selected p-column
-    const anchorColumn = ctx.resultPool.getPColumnByRef(ctx.uiState?.anchorColumn);
-    const anchorSpec = anchorColumn?.spec;
-    if (!anchorSpec) {
-      console.error("Anchor spec is undefined or is not PColumnSpec", anchorSpec);
-      return undefined;
-    }
-
-    return anchorSpec;
-  })
-
   .output("isRunning", (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
   .sections((_ctx) => [
@@ -159,9 +131,9 @@ export const model = BlockModel.create()
   ])
 
   .title((ctx) =>
-    ctx.args.title ? `Differential Expression - ${ctx.args.title}` : "Differential Expression",
+    ctx.data.title ? `Differential Expression - ${ctx.data.title}` : "Differential Expression",
   )
 
-  .done(2);
+  .done();
 
-export type BlockOutputs = InferOutputsType<typeof model>;
+export type BlockOutputs = InferOutputsType<typeof platforma>;

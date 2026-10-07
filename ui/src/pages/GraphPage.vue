@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PredefinedGraphOption } from "@milaboratories/graph-maker";
 import { GraphMaker } from "@milaboratories/graph-maker";
-import "@milaboratories/graph-maker/styles";
 import type { PColumnIdAndSpec } from "@platforma-sdk/model";
 import { computed } from "vue";
 import { useApp } from "../app";
@@ -68,7 +67,7 @@ const defaultOptions = computed((): PredefinedGraphOption<"scatterplot-umap">[] 
 
 <template>
   <GraphMaker
-    v-model="app.model.ui.graphState"
+    v-model="app.model.data.graphState"
     chartType="scatterplot-umap"
     :p-frame="app.model.outputs.topTablePf"
     :defaultOptions="defaultOptions"

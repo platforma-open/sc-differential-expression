@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@milaboratories/graph-maker": "catalog:",
+    "@milaboratories/helpers": "catalog:",
     "@platforma-open/milaboratories.sc-differential-expression.kind": "workspace:*",
     "@platforma-sdk/model": "catalog:"
   },

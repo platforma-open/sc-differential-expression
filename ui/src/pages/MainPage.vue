@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import "@milaboratories/graph-maker/styles";
 import type { PlRef } from "@platforma-sdk/model";
 import { PFrameImpl, plRefsEqual } from "@platforma-sdk/model";
 import {
@@ -30,16 +29,16 @@ const tableSettings = usePlDataTableSettingsV2({
 const data = reactive<{
   settingsOpen: boolean;
 }>({
-  settingsOpen: app.model.args.countsRef === undefined,
+  settingsOpen: app.model.data.countsRef === undefined,
 });
 
 function setInput(inputRef?: PlRef) {
-  app.model.args.countsRef = inputRef;
+  app.model.data.countsRef = inputRef;
   if (inputRef)
-    app.model.args.title = app.model.outputs.countsOptions?.find((o) =>
+    app.model.data.title = app.model.outputs.countsOptions?.find((o) =>
       plRefsEqual(o.ref, inputRef),
     )?.label;
-  else app.model.args.title = undefined;
+  else app.model.data.title = undefined;
 }
 
 const covariateOptions = computed(() => {
@@ -52,7 +51,7 @@ const covariateOptions = computed(() => {
 });
 
 const contrastFactorOptions = computed(() => {
-  return app.model.args.covariateRefs.map((ref) => ({
+  return app.model.data.covariateRefs.map((ref) => ({
     value: ref,
     label: covariateOptions.value.find((m) => m.value.name === ref.name)?.label ?? "",
   }));
@@ -77,25 +76,32 @@ const uniqueOptions = useWatchFetch(
     if (!response) {
       return undefined;
     }
-    // Check if there where old selected numerator/denominator values and remove them
-    const availableValues = [...response.values.data].map(String);
-    if (
-      app.model.args.numerators?.some((selectedValue) => !availableValues.includes(selectedValue))
-    ) {
-      app.model.args.numerators = [];
-    }
-    if (app.model.args.denominator && !availableValues.includes(app.model.args.denominator)) {
-      app.model.args.denominator = undefined;
-    }
-
-    // Reset previous values
     return [...response.values.data].map((v) => ({ value: String(v), label: String(v) }));
   },
 );
 
+// Groups are values of the contrast factor, so a new factor makes the old
+// choices meaningless. The reset happens here, on the user's own change, and
+// not in a watcher on the fetched values.
+function setContrastFactor(ref?: PlRef) {
+  app.model.data.contrastFactor = ref;
+  app.model.data.numerators = [];
+  app.model.data.denominator = undefined;
+}
+
+// Chosen groups that the current contrast factor no longer has, for example
+// after the upstream data changed.
+const missingGroups = computed(() => {
+  const available = uniqueOptions.value?.map((op) => op.value);
+  if (available === undefined) return [];
+  const chosen = [...app.model.data.numerators];
+  if (app.model.data.denominator !== undefined) chosen.push(app.model.data.denominator);
+  return chosen.filter((group) => !available.includes(group));
+});
+
 // Get all possible denominator values (excluding numerators)
 const denominatorOptions = computed(() => {
-  return uniqueOptions.value?.filter((op) => !app.model.args.numerators.includes(op.value));
+  return uniqueOptions.value?.filter((op) => !app.model.data.numerators.includes(op.value));
 });
 
 // Get error logs
@@ -140,7 +146,7 @@ const errorLogs = useWatchFetch(
       {{ errorLogs.value }}
     </PlAlert>
     <PlAgDataTableV2
-      v-model="app.model.ui.tableState"
+      v-model="app.model.data.tableState"
       :settings="tableSettings"
       show-columns-panel
       show-export-button
@@ -149,7 +155,7 @@ const errorLogs = useWatchFetch(
     <PlSlideModal v-model="data.settingsOpen">
       <template #title>Settings</template>
       <PlDropdownRef
-        v-model="app.model.args.countsRef"
+        v-model="app.model.data.countsRef"
         :options="app.model.outputs.countsOptions"
         label="Select dataset"
         required
@@ -157,7 +163,7 @@ const errorLogs = useWatchFetch(
         @update:model-value="setInput"
       />
       <PlDropdownMulti
-        v-model="app.model.args.covariateRefs"
+        v-model="app.model.data.covariateRefs"
         :options="covariateOptions"
         label="Covariates"
         required
@@ -172,10 +178,11 @@ const errorLogs = useWatchFetch(
         </template>
       </PlDropdownMulti>
       <PlDropdown
-        v-model="app.model.args.contrastFactor"
+        :model-value="app.model.data.contrastFactor"
         :options="contrastFactorOptions"
         label="Contrast factor"
         required
+        @update:model-value="setContrastFactor"
       >
         <template #tooltip>
           <div>
@@ -186,7 +193,7 @@ const errorLogs = useWatchFetch(
         </template>
       </PlDropdown>
       <PlDropdownMulti
-        v-model="app.model.args.numerators"
+        v-model="app.model.data.numerators"
         :options="uniqueOptions.value"
         label="Numerator (test group)"
         required
@@ -200,7 +207,7 @@ const errorLogs = useWatchFetch(
         </template>
       </PlDropdownMulti>
       <PlDropdown
-        v-model="app.model.args.denominator"
+        v-model="app.model.data.denominator"
         :options="denominatorOptions"
         label="Denominator (reference group)"
         required
@@ -214,10 +221,14 @@ const errorLogs = useWatchFetch(
         </template>
       </PlDropdown>
 
+      <PlAlert v-if="missingGroups.length > 0" type="warn">
+        {{ `These groups are not present in the contrast factor: ${missingGroups.join(", ")}` }}
+      </PlAlert>
+
       <PlAccordionSection label="SIGNIFICANCE THRESHOLDS">
         <PlRow>
           <PlNumberField
-            v-model="app.model.args.log2FCThreshold"
+            v-model="app.model.data.log2FCThreshold"
             label="Log2(FC)"
             :minValue="0"
             :step="0.1"
@@ -233,7 +244,7 @@ const errorLogs = useWatchFetch(
             </template>
           </PlNumberField>
           <PlNumberField
-            v-model="app.model.args.pAdjThreshold"
+            v-model="app.model.data.pAdjThreshold"
             label="Adjusted p-value"
             :minValue="0"
             :maxValue="1"
@@ -250,12 +261,12 @@ const errorLogs = useWatchFetch(
           </PlNumberField>
         </PlRow>
         <!-- Add warnings if selected threshold are out of most commonly used bounds -->
-        <PlAlert v-if="app.model.args.pAdjThreshold > 0.05" type="warn">
+        <PlAlert v-if="app.model.data.pAdjThreshold > 0.05" type="warn">
           {{
             "Warning: The selected adjusted p-value threshold is higher than the commonly recommended 0.05"
           }}
         </PlAlert>
-        <PlAlert v-if="app.model.args.log2FCThreshold < 0.6" type="warn">
+        <PlAlert v-if="app.model.data.log2FCThreshold < 0.6" type="warn">
           {{
             "Warning: The selected Log2(FC) threshold may be too low for identifying robust differentially expressed genes"
           }}
