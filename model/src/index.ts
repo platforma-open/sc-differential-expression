@@ -1,17 +1,17 @@
-import type { GraphMakerState } from '@milaboratories/graph-maker';
+import type { GraphMakerState } from "@milaboratories/graph-maker";
 import type {
   InferOutputsType,
   PColumnIdAndSpec,
   PFrameHandle,
   PlDataTableStateV2,
   PlRef,
-} from '@platforma-sdk/model';
+} from "@platforma-sdk/model";
 import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTableV2,
   isPColumnSpec,
-} from '@platforma-sdk/model';
+} from "@platforma-sdk/model";
 
 export type UiState = {
   anchorColumn?: PlRef;
@@ -48,36 +48,44 @@ export const model = BlockModel.create()
       },
     },
     graphState: {
-      title: 'Differential gene expression',
-      template: 'dots',
+      title: "Differential gene expression",
+      template: "dots",
       currentTab: null,
     },
   })
 
-  .argsValid((ctx) => (
-    (ctx.args.numerators !== undefined)) && (ctx.args.numerators.length !== 0)
-  && (ctx.args.denominator !== undefined)
-  && (ctx.args.log2FCThreshold !== undefined)
-  && (ctx.args.pAdjThreshold !== undefined),
+  .argsValid(
+    (ctx) =>
+      ctx.args.numerators !== undefined &&
+      ctx.args.numerators.length !== 0 &&
+      ctx.args.denominator !== undefined &&
+      ctx.args.log2FCThreshold !== undefined &&
+      ctx.args.pAdjThreshold !== undefined,
   )
 
-  .output('countsOptions', (ctx) =>
-    ctx.resultPool.getOptions((spec) => isPColumnSpec(spec)
-      && spec.name === 'pl7.app/rna-seq/countMatrix'
-      && spec.domain?.['pl7.app/rna-seq/normalized'] === 'false'
+  .output("countsOptions", (ctx) =>
+    ctx.resultPool.getOptions(
+      (spec) =>
+        isPColumnSpec(spec) &&
+        spec.name === "pl7.app/rna-seq/countMatrix" &&
+        spec.domain?.["pl7.app/rna-seq/normalized"] === "false",
       // && spec.annotations?.['pl7.app/hideDataFromGraphs'] === 'true'
-    , { includeNativeLabel: false, addLabelAsSuffix: true }),
+      { includeNativeLabel: false, addLabelAsSuffix: true },
+    ),
   )
 
-  .output('metadataOptions', (ctx) =>
-    ctx.resultPool.getOptions((spec) => isPColumnSpec(spec)
-      && ((spec.name === 'pl7.app/metadata')
-        // @TODO: We will have a specific annotation in the future
-        || (spec.name === 'pl7.app/rna-seq/leidencluster')
-        || (spec.name === 'pl7.app/rna-seq/cellType'))),
+  .output("metadataOptions", (ctx) =>
+    ctx.resultPool.getOptions(
+      (spec) =>
+        isPColumnSpec(spec) &&
+        (spec.name === "pl7.app/metadata" ||
+          // @TODO: We will have a specific annotation in the future
+          spec.name === "pl7.app/rna-seq/leidencluster" ||
+          spec.name === "pl7.app/rna-seq/cellType"),
+    ),
   )
 
-  .output('numeratorOptions', (ctx) => {
+  .output("numeratorOptions", (ctx) => {
     if (!ctx.args.contrastFactor) return undefined;
 
     const pColumn = ctx.resultPool.getPColumnByRef(ctx.args.contrastFactor);
@@ -86,8 +94,8 @@ export const model = BlockModel.create()
     return ctx.createPFrame([pColumn]);
   })
 
-  .output('topTableFilteredPt', (ctx) => {
-    const pCols = ctx.outputs?.resolve('topTableFilteredPf')?.getPColumns();
+  .output("topTableFilteredPt", (ctx) => {
+    const pCols = ctx.outputs?.resolve("topTableFilteredPf")?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
@@ -95,8 +103,8 @@ export const model = BlockModel.create()
     return createPlDataTableV2(ctx, pCols, ctx.uiState?.tableState);
   })
 
-  .output('deErrors', (ctx) => {
-    const pCols = ctx.outputs?.resolve('deErrors')?.getPColumns();
+  .output("deErrors", (ctx) => {
+    const pCols = ctx.outputs?.resolve("deErrors")?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
@@ -104,16 +112,16 @@ export const model = BlockModel.create()
     return ctx.createPFrame(pCols);
   })
 
-  .output('topTablePf', (ctx): PFrameHandle | undefined => {
-    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+  .output("topTablePf", (ctx): PFrameHandle | undefined => {
+    const pCols = ctx.outputs?.resolve("topTablePf")?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
     return createPFrameForGraphs(ctx, pCols);
   })
 
-  .output('topTablePcols', (ctx) => {
-    const pCols = ctx.outputs?.resolve('topTablePf')?.getPColumns();
+  .output("topTablePcols", (ctx) => {
+    const pCols = ctx.outputs?.resolve("topTablePf")?.getPColumns();
 
     if (pCols === undefined || pCols.length === 0) {
       return undefined;
@@ -124,11 +132,11 @@ export const model = BlockModel.create()
         ({
           columnId: c.id,
           spec: c.spec,
-        } satisfies PColumnIdAndSpec),
+        }) satisfies PColumnIdAndSpec,
     );
   })
 
-  .output('anchorSpec', (ctx) => {
+  .output("anchorSpec", (ctx) => {
     // return the Reference of the p-column selected as input dataset in Settings
     if (!ctx.uiState?.anchorColumn) return undefined;
 
@@ -136,24 +144,22 @@ export const model = BlockModel.create()
     const anchorColumn = ctx.resultPool.getPColumnByRef(ctx.uiState?.anchorColumn);
     const anchorSpec = anchorColumn?.spec;
     if (!anchorSpec) {
-      console.error('Anchor spec is undefined or is not PColumnSpec', anchorSpec);
+      console.error("Anchor spec is undefined or is not PColumnSpec", anchorSpec);
       return undefined;
     }
 
     return anchorSpec;
   })
 
-  .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
+  .output("isRunning", (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
-  .sections((_ctx) => ([
-    { type: 'link', href: '/', label: 'Main' },
-    { type: 'link', href: '/volcano', label: 'Volcano plot' },
-  ]))
+  .sections((_ctx) => [
+    { type: "link", href: "/", label: "Main" },
+    { type: "link", href: "/volcano", label: "Volcano plot" },
+  ])
 
   .title((ctx) =>
-    ctx.args.title
-      ? `Differential Expression - ${ctx.args.title}`
-      : 'Differential Expression',
+    ctx.args.title ? `Differential Expression - ${ctx.args.title}` : "Differential Expression",
   )
 
   .done(2);
