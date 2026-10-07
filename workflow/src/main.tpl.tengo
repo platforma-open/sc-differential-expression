@@ -4,6 +4,7 @@ render := import("@platforma-sdk/workflow-tengo:render")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
+maps := import("@platforma-sdk/workflow-tengo:maps")
 
 pfTopTableConv := import(":pf-top-table-conv")
 pfDeErrorsConv := import(":pf-de-errors-conv")
@@ -42,20 +43,28 @@ wf.body(func(args) {
 	pAdjThreshold := args.pAdjThreshold
 	log2FCThreshold := args.log2FCThreshold
 
-	// Set default conversion memory and CPU
+	// Default conversion memory and CPU for the covariates export and the result
+	// imports: those carry one row per cell or per gene, orders of magnitude
+	// smaller than the counts matrix.
 	defaultConvMem := "16GiB"
 	defaultConvCpu := 1
 
-	covariates := []
-	for _, v in args.metaRefs {
-		covariates = append(covariates, v)
-	}
+	// The counts export is the heaviest conversion in the block: the long-format
+	// counts p-column holds one row per non-zero (cell, gene) pair, which reaches
+	// hundreds of millions of rows on real datasets. Parquet keeps it columnar,
+	// instead of paying CSV text encoding for three high-cardinality string columns.
+	countsConvMem := "32GiB" // @TODO: set based on the size of the input
+	countsConvCpu := 4       // @TODO: set based on the size of the input
+
+	// Sorted keys, so the covariates frame is the same for the same choice and
+	// the export is not recomputed.
+	covariates := maps.getValues(args.metaRefs)
 
 	csvCovariates := xsv.exportFrame(covariates, "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
-	csvCounts := xsv.exportFrame([rawCounts], "csv", { mem: defaultConvMem, cpu: defaultConvCpu })
+	countsParquet := xsv.exportFrame([rawCounts], "parquet", { mem: countsConvMem, cpu: countsConvCpu })
 
 	runWilcoxonRender := render.create(runWilcoxonTpl, {
-		csvCounts: csvCounts,
+		countsParquet: countsParquet,
 		csvCovariates: csvCovariates,
 		numerators: numerators,
 		contrastFactorName: contrastFactorName,
@@ -66,16 +75,16 @@ wf.body(func(args) {
 		}
 	})
 
-	// Import CSV files as pFrames
+	// Import the result tables as pFrames
 	topTableImportParams := pfTopTableConv.getColumns(blockId, species, log2FCThreshold, pAdjThreshold)
-	topTablePf := xsv.importFile(runWilcoxonRender.output("topTableCsv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
-	topTableFilteredPf := xsv.importFile(runWilcoxonRender.output("topTableFilteredCsv"), "csv", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	topTablePf := xsv.importFile(runWilcoxonRender.output("topTableParquet"), "parquet", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	topTableFilteredPf := xsv.importFile(runWilcoxonRender.output("topTableFilteredParquet"), "parquet", topTableImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 	
 	deErrorsImportParams := pfDeErrorsConv.getColumns()
-	deErrorsPf := xsv.importFile(runWilcoxonRender.output("deErrorsCsv"), "csv", deErrorsImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	deErrorsPf := xsv.importFile(runWilcoxonRender.output("deErrorsParquet"), "parquet", deErrorsImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	DEGImportParams := pfDEGConv.getColumns(blockId, species)
-	DEGPf := xsv.importFile(runWilcoxonRender.output("topTableFilteredCsv"), "csv", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
+	DEGPf := xsv.importFile(runWilcoxonRender.output("topTableFilteredParquet"), "parquet", DEGImportParams, { mem: defaultConvMem, cpu: defaultConvCpu })
 
 	// Create trace
 	pAdjStr := string(pAdjThreshold)
