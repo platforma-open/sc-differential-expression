@@ -2,7 +2,14 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [
+    [
+      "@platforma-open/milaboratories.sc-differential-expression",
+      "@platforma-open/milaboratories.sc-differential-expression.model",
+      "@platforma-open/milaboratories.sc-differential-expression.ui",
+      "@platforma-open/milaboratories.sc-differential-expression.workflow"
+    ]
+  ],
   "linked": [],
   "access": "restricted",
   "baseBranch": "main",

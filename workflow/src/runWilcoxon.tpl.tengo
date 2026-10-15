@@ -6,7 +6,7 @@ pt := import("@platforma-sdk/workflow-tengo:pt")
 
 self.validateInputs({
 	"__options__,closed": "",
-	csvCounts: "any",
+	countsParquet: "any",
 	csvCovariates: "any",
 	numerators: "any",
 	contrastFactorName: "any",
@@ -19,10 +19,10 @@ self.validateInputs({
 	
 })
 
-self.defineOutputs("topTableCsv", "topTableFilteredCsv", "deErrorsCsv")
+self.defineOutputs("topTableParquet", "topTableFilteredParquet", "deErrorsParquet")
 
 self.body(func(args) {
-	csvCounts := args.csvCounts
+	countsParquet := args.countsParquet
 	csvCovariates := args.csvCovariates
 	numerators := args.numerators
 	contrastFactorName := args.contrastFactorName
@@ -36,58 +36,41 @@ self.body(func(args) {
 	dfsTopTableFiltered := []
 	dfsDeErrors := []
 
-	// We need a column type schema for cases where empty filtered tables are 
-	// concatenated with non-empty ones
-	// In these cases the column types of empty columns are String and fail to 
-	//merge with same columns that have different type
-	schema := [
-		{column: "Contrast", type: "String"},
-		{column: "gene", type: "String"},
-		{column: "logfc", type: "Float"},
-		{column: "pval", type: "Float"},
-		{column: "pval_adj", type: "Float"},
-		{column: "score", type: "Float"},
-		{column: "minlog10padj", type: "Float"},
-		{column: "regulationDirection", type: "String"}
-	]
-	schemaDeErrors := [
-		{column: "Error", type: "String"},
-		{column: "value", type: "String"}
-	]
 	for numerator in numerators {
 		testWilcoxon := exec.builder().
 			software(assets.importSoftware("@platforma-open/milaboratories.sc-differential-expression.software:run-deWilcoxon")).
-			mem("16GiB").
-			cpu(1).
+			mem("32GiB").
+			cpu(4).
 			addFile("metadata.csv", csvCovariates).
-			addFile("counts.csv", csvCounts).
-			arg("--expr").arg("counts.csv").
+			addFile("counts.parquet", countsParquet).
+			arg("--expr").arg("counts.parquet").
 			arg("--meta").arg("metadata.csv").
 			arg("--group1").arg(string(numerator)).
 			arg("--group2").arg(string(denominator)).
 			arg("--condition_col").arg(string(contrastFactorName)).
-			arg("--output").arg("topTable.csv").
+			arg("--output").arg("topTable.parquet").
 			arg("--padj_cutoff").arg(string(pAdjThreshold)).
 			arg("--logfc_cutoff").arg(string(log2FCThreshold)).
-			arg("--error_output").arg("de_errors.csv").
-			saveFile("topTable.csv").
-			saveFile("topTable_filtered.csv").
-			saveFile("de_errors.csv").
+			arg("--error_output").arg("de_errors.parquet").
+			saveFile("topTable.parquet").
+			saveFile("topTable_filtered.parquet").
+			saveFile("de_errors.parquet").
 			printErrStreamToStdout().
 			saveStdoutContent().
 			cache(24 * 60 * 60 * 1000).
 			run()
-		// These tables might be empty, so we make sure to include an schema of expected column formats
-		dfsTopTable += [wf.frame(testWilcoxon.getFile("topTable.csv"), {xsvType: "csv", schema: schema})]
-		dfsTopTableFiltered += [wf.frame(testWilcoxon.getFile("topTable_filtered.csv"), {xsvType: "csv", schema: schema})]
-		dfsDeErrors += [wf.frame(testWilcoxon.getFile("de_errors.csv"), {xsvType: "csv", schema: schemaDeErrors})]
+		// The software writes every table with fixed column types, empty ones
+		// included, so the frames concatenate without a schema here.
+		dfsTopTable += [wf.frame(testWilcoxon.getFile("topTable.parquet"), {xsvType: "parquet"})]
+		dfsTopTableFiltered += [wf.frame(testWilcoxon.getFile("topTable_filtered.parquet"), {xsvType: "parquet"})]
+		dfsDeErrors += [wf.frame(testWilcoxon.getFile("de_errors.parquet"), {xsvType: "parquet"})]
 	}
 
 	///////// ptabler steps //////////
 	concatenatedTopTable := pt.concat(dfsTopTable)
-	concatenatedTopTable.save("concatenated_output_topTable.csv")
+	concatenatedTopTable.save("concatenated_output_topTable.parquet")
 	concatenatedTopTableFiltered := pt.concat(dfsTopTableFiltered)
-	concatenatedTopTableFiltered.save("concatenated_output_topTable_filtered.csv")
+	concatenatedTopTableFiltered.save("concatenated_output_topTable_filtered.parquet")
 
 	// Concatenate and deduplicate error files
 	concatenatedDeErrors := pt.concat(dfsDeErrors)
@@ -95,15 +78,14 @@ self.body(func(args) {
 	uniqueDeErrors := concatenatedDeErrors.groupBy("Error").agg(
 		pt.col("value").first().alias("value")
 	)
-	uniqueDeErrors.save("concatenated_output_de_errors.csv")
+	uniqueDeErrors.save("concatenated_output_de_errors.parquet")
 
 	ptablerResult := wf.run()
 	//////////////////
 
-	// Return CSV file paths
 	return {
-		topTableCsv: ptablerResult.getFile("concatenated_output_topTable.csv"),
-		topTableFilteredCsv: ptablerResult.getFile("concatenated_output_topTable_filtered.csv"),
-		deErrorsCsv: ptablerResult.getFile("concatenated_output_de_errors.csv")
+		topTableParquet: ptablerResult.getFile("concatenated_output_topTable.parquet"),
+		topTableFilteredParquet: ptablerResult.getFile("concatenated_output_topTable_filtered.parquet"),
+		deErrorsParquet: ptablerResult.getFile("concatenated_output_de_errors.parquet")
 	}
 })
