@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.sc-differential-expression.workflow
 
+## 1.8.1
+
+### Patch Changes
+
+- 6509608: Release every package through npm trusted publishing (OIDC) so each package's trusted publisher is used before it expires.
+- Updated dependencies [6509608]
+  - @platforma-open/milaboratories.sc-differential-expression.software@1.3.5
+
 ## 1.8.0
 
 ### Patch Changes

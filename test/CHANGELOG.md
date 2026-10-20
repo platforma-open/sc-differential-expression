@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.sc-differential-expression.test
 
+## 1.1.2
+
+### Patch Changes
+
+- 6509608: Release every package through npm trusted publishing (OIDC) so each package's trusted publisher is used before it expires.
+
 ## 1.1.1
 
 ### Patch Changes
